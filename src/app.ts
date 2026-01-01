@@ -13,7 +13,7 @@ import minibusstopsRoutes from "./modules/miniBusStops/miniBusStops.routes";
 import routeRoutes from "./modules/routes/route.routes";
 import "dotenv/config";
 
-import { initSocket } from "./socket";
+import { initSocket } from "./WebSockets/socket";
 
 export async function buildApp() {
   const app = Fastify({ logger: true });

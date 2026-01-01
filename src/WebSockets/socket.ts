@@ -1,7 +1,7 @@
 import { Server } from "socket.io"
 import { FastifyInstance } from "fastify"
 import { PrismaClient } from "@prisma/client"
-import { RouteLocationState } from "./modules/routes/route.interface";
+import { RouteLocationState } from "../modules/routes/route.interface";
 import { ro } from "@faker-js/faker/.";
 
 const prisma = new PrismaClient();
@@ -257,5 +257,3 @@ export function initSocket(app: FastifyInstance){
 
     });
 }
-
-
