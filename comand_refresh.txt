@@ -1,2 +1,5 @@
 npx prisma migrate dev -n rename_routes //Para criar uma nova migration e aplicar no banco de dados
 npx prisma generate
+
+
+Como ficaria as rotas, service, controller de sms, ou ficaria tudo apenas no arquivo chat.ts

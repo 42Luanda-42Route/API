@@ -90,12 +90,6 @@
               "type": "null"
             }
           ]
-        },
-        "messages": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Message"
-          }
         }
       }
     },
@@ -145,12 +139,6 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/DriverCoordinates"
-          }
-        },
-        "messages": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Message"
           }
         },
         "current_route": {
@@ -241,14 +229,58 @@
         "id": {
           "type": "integer"
         },
-        "message": {
+        "sender_id": {
+          "type": "integer"
+        },
+        "senderType": {
+          "type": "integer"
+        },
+        "content": {
           "type": "string"
         },
-        "cadete": {
-          "$ref": "#/definitions/Cadetes"
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         },
-        "driver": {
-          "$ref": "#/definitions/Drivers"
+        "chat": {
+          "$ref": "#/definitions/Chat"
+        }
+      }
+    },
+    "Chat": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "full_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "GENERAL",
+            "ROUTE"
+          ]
+        },
+        "route_id": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Message"
+          }
         }
       }
     },
@@ -289,6 +321,9 @@
     },
     "message": {
       "$ref": "#/definitions/Message"
+    },
+    "chat": {
+      "$ref": "#/definitions/Chat"
     },
     "driverCoordinates": {
       "$ref": "#/definitions/DriverCoordinates"

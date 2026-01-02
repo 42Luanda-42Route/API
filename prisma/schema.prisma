@@ -31,7 +31,7 @@ model Cadetes {
   phone     Int?
   stop_id   Int?
   stop      MiniBusStop? @relation(fields: [stop_id], references: [id])
-  messages  Message[]    @relation("CadeteMessages")
+  //messages  Message[]    @relation("CadeteMessages")
 }
 
 model Drivers {
@@ -43,7 +43,7 @@ model Drivers {
   photo           String?
   phone           Int?
   coordinates     DriverCoordinates[]
-  messages        Message[]           @relation("DriverMessages")
+  //messages        Message[]           @relation("DriverMessages")
 
   // Rota atual do motorista
   current_route_id Int?
@@ -76,12 +76,34 @@ model Route {
 
 model Message {
   id        Int     @id @default(autoincrement())
-  id_driver Int
-  id_cadete Int
-  message   String
+  chat_id   Int
+  sender_id Int
+  senderType Int
+  content String
 
-  cadete    Cadetes @relation("CadeteMessages", fields: [id_cadete], references: [id])
-  driver    Drivers @relation("DriverMessages", fields: [id_driver], references: [id])
+  createdAt DateTime @default(now())
+  chat  Chat @relation(fields: [chat_id], references: [id])
+
+  //id_driver Int
+  //id_cadete Int
+  //message   String
+
+  //cadete    Cadetes @relation("CadeteMessages", fields: [id_cadete], references: [id])
+  //driver    Drivers @relation("DriverMessages", fields: [id_driver], references: [id])
+}
+
+model Chat{
+  id        Int     @id @default(autoincrement())
+  full_name String?
+  type  ChatType
+  route_id  Int?
+  createdAt DateTime  @default(now())
+  messages  Message[]
+}
+
+enum ChatType {
+  GENERAL
+  ROUTE
 }
 
 model DriverCoordinates {

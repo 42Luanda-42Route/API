@@ -11,13 +11,13 @@ socket.on("connect", () => {
   console.log("Cadete conectado");
 
    socket.emit("cadete:joinRoute", {
-     cadeteId: 10
+     cadeteId: 2
    });
 });
 
 setInterval(() => {
   socket.emit("cadete:updateLocation", {
-    cadeteId: 19,
+    cadeteId: 2,
     lat: -8.83833 + Math.random() * 0.001,
     long: 13.23444 + Math.random() * 0.001
   });
