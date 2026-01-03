@@ -1,19 +1,19 @@
 import { buildApp } from './app'
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { setupSocket } from "./modules/drivers/sockets";
+import { registerChatSocket } from './modules/chat/chat.socket';
 
 async function start() {
   const HOST = '0.0.0.0'
   const app = await buildApp()
 
-  //const server = createServer(app.server);
+  const server = createServer(app.server);
 
-  //const io = new Server(server, {
-  //  cors: { origin: "*" },
-  //});
+  const io = new Server(server, {
+    cors: { origin: "*" },
+  });
 
-  //setupSocket(io);
+  registerChatSocket(io);
   try{
     await app.listen({ port: 3000, host: HOST }).then(() =>{
       console.log(`Server is running on http://${HOST}:3000`)

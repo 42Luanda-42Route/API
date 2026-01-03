@@ -99,6 +99,8 @@ model Chat{
   route_id  Int?
   createdAt DateTime  @default(now())
   messages  Message[]
+
+  @@unique([type, route_id])
 }
 
 enum ChatType {
