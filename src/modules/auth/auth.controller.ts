@@ -7,17 +7,19 @@ export class AuthController {
     return reply.redirect(url);
   }
 
-  static async callback42(request: FastifyRequest, reply: FastifyReply) {
-    const { code } = request.query as { code: string };
+  
+    static async callback42(request: FastifyRequest, reply: FastifyReply) {
+  const { code } = request.query as { code: string };
 
-    const profile = await AuthService.handleCallback(code);
+  const { user, token } = await AuthService.handleCallback(code);
 
-    return reply.send({
-        authenticated: true,
-        profile,
-      });
-    }
-  /*static async callback42(request: FastifyRequest, reply: FastifyReply) {
+  // 🔗 DEEP LINK DO APP
+  const redirectUrl = `https://ac477277db72512e-105-174-52-229.serveousercontent.com?token=${token}`;
+
+  return reply.redirect(redirectUrl);
+}
+
+    /*static async callback42(request: FastifyRequest, reply: FastifyReply) {
     const { code } = request.query as { code: string };
     //const { user, token } = await AuthService.handleCallback(code);
     const { token } = await AuthService.handleCallback(code);
