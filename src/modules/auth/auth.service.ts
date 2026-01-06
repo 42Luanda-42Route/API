@@ -32,6 +32,7 @@ export class AuthService {
             code,
             redirect_uri: oauthConfig.redirectUri,
             grant_type: "authorization_code",
+            
           };
 
           console.log("\n\n\n"+oauthConfig.redirectUri+"\n\\n\n");
