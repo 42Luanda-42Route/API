@@ -3,20 +3,18 @@ import { AuthService } from "./auth.service";
 
 export class AuthController {
   static async redirectTo42(request: FastifyRequest, reply: FastifyReply) {
+    const { redirect } = request?.query as { redirect: string };
     const url = await AuthService.generateAuthUrl();
-    return reply.redirect(url);
+    return reply.header("Location", redirect).redirect(url);
   }
 
   
-    static async callback42(request: FastifyRequest, reply: FastifyReply) {
+  static async callback42(request: FastifyRequest, reply: FastifyReply) {
   const { code } = request.query as { code: string };
+  const { token } = await AuthService.handleCallback(code);
+  const redirect = request.headers.location;
 
-  const { user, token } = await AuthService.handleCallback(code);
-
-  // 🔗 DEEP LINK DO APP
-  const redirectUrl = `exp://10.12.4.9:8081/--/auth/42/callback?token=${token}`;
-
-  return reply.redirect(redirectUrl);
+  return reply.redirect(redirect+`?token=${token}`);
 }
 
     /*static async callback42(request: FastifyRequest, reply: FastifyReply) {
@@ -29,3 +27,18 @@ export class AuthController {
     return reply.send({token });
   }*/
 }
+
+// export class AuthController {
+//   static async redirectTo42(request: FastifyRequest, reply: FastifyReply) {
+//     const redirect = request?.query?.redirect as string | undefined;
+//     const url = await AuthService.generateAuthUrl();
+//     return reply.redirect(url).header("Location", redirect);
+//   }
+
+//   static async callback42(request: FastifyRequest, reply: FastifyReply) {
+//     const { code } = request.query as { code: string };
+//     const redirect = request?.headers.location as string | undefined;
+
+//     const profile = await AuthService.handleCallback(code);
+
+//     return reply.redirect(redirect || '/').header("Location", redirect || '/');
