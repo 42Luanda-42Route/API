@@ -14,7 +14,7 @@ export class AuthController {
   const { user, token } = await AuthService.handleCallback(code);
 
   // 🔗 DEEP LINK DO APP
-  const redirectUrl = `exp://10.12.15.133:8081/--/auth/42/callback?token=${token}`;
+  const redirectUrl = `exp://10.12.4.9:8081/--/auth/42/callback?token=${token}`;
 
   return reply.redirect(redirectUrl);
 }
