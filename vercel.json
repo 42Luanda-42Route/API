@@ -1,0 +1,4 @@
+{
+  "devCommand": "ts-node-dev --respawn --transpile-only src/main.ts",
+  "framework": null
+}
