@@ -18,12 +18,14 @@ const client = new OAuth2.AuthorizationCode({
 });
 
 export class AuthService {
-  static async generateAuthUrl(): Promise<string> {
+  static async generateAuthUrl(redirect: string): Promise<string> {
     const authorizationUri = client.authorizeURL({
       redirect_uri: oauthConfig.redirectUri,
       scope: "public",
-      state: "42IntraState",
+      state: redirect,
     });
+    console.log("URLLLLLLLLLLLLLL"+authorizationUri);
+    
     return authorizationUri;
   }
 
