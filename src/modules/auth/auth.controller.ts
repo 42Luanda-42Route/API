@@ -19,6 +19,10 @@ export class AuthController {
   return reply.redirect(redirectUrl);
 }
 
+// Redirect URI do INTRA
+ // 42Routes://auth
+//https://four2routeapi.onrender.com/api/auth/42/callback
+  
     /*static async callback42(request: FastifyRequest, reply: FastifyReply) {
     const { code } = request.query as { code: string };
     //const { user, token } = await AuthService.handleCallback(code);
