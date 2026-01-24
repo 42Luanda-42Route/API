@@ -21,7 +21,8 @@ export class AuthController {
 
       // 🔗 DEEP LINK DO APP
       const redirectUrl = state+`?token=${token}`;
-
+      console.log("SUCCESSS"+redirectUrl);
+      
       return reply.redirect(redirectUrl); 
       } catch (error) {
         console.log(error);
