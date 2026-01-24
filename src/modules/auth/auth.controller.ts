@@ -12,7 +12,7 @@ export class AuthController {
 
   
     static async callback42(request: FastifyRequest, reply: FastifyReply) {
-      try {
+     // try {
        const { code, state } = request.query as { code: string, state: string};
       //const  mobileRedirectURL =  request.params;
       console.log("YYYYYYYYYYYYYY:"+state);
@@ -23,11 +23,12 @@ export class AuthController {
       const redirectUrl = state+`?token=${token}`;
       console.log("SUCCESSS"+redirectUrl);
       
-      return reply.redirect(redirectUrl); 
-      } catch (error) {
-        console.log(error);
+      return reply.send({token, user});
+      //return reply.redirect(redirectUrl); 
+      // } catch (error) {
+      //   console.log(error);
         
-      }
+      // }
 }
 
 // Redirect URI do INTRA

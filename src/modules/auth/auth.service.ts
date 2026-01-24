@@ -24,8 +24,6 @@ export class AuthService {
       scope: "public",
       state: redirect,
     });
-    console.log("URLLLLLLLLLLLLLL"+authorizationUri);
-    
     return authorizationUri;
   }
 
