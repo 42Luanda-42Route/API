@@ -13,6 +13,8 @@ export class AuthController {
   
     static async callback42(request: FastifyRequest, reply: FastifyReply) {
      // try {
+
+     log("Callback recebido com query: ", request.query);
        const { code, state } = request.query as { code: string, state: string};
       //const  mobileRedirectURL =  request.params;
       console.log("YYYYYYYYYYYYYY:"+state);
@@ -20,7 +22,7 @@ export class AuthController {
       const { user, token } = await AuthService.handleCallback(code);
 
       // 🔗 DEEP LINK DO APP
-      const redirectUrl = state+`?token=${token}`;
+      const redirectUrl = "routes42://auth/42/callback";//state+`?token=${token}`;
       console.log("SUCCESSS"+redirectUrl);
       
       try {
@@ -31,7 +33,7 @@ export class AuthController {
         
       }
 }
-  
+
 // Redirect URI do INTRA
  // 42Routes://auth
 //https://four2routeapi.onrender.com/api/auth/42/callback
