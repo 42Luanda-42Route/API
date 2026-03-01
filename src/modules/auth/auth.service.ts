@@ -47,8 +47,8 @@ export class AuthService {
           }
 
           const profile = await response.json();
-          
-          console.log("\n\n\nPPPPPPPPPPPP"+profile+"\n\n\n");
+          JSON.stringify(profile) 
+          console.log("\n\n\nPPPPPPPPPPPP"+JSON.stringify(profile)+"\n\n\n");
           
           const jwtToken = jwt.sign(
             {
