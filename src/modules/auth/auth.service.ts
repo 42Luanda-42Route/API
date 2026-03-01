@@ -48,8 +48,17 @@ export class AuthService {
 
           const profile = await response.json();
           JSON.stringify(profile) 
-          console.log("\n\n\nPPPPPPPPPPPP"+JSON.stringify(profile)+"\n\n\n");
+
+          console.log("\n\n\nPPPPPPPPPPPP"+JSON.stringify(profile, null, 2)+"\n\n\n");
           
+          console.log(Object.keys(profile));
+
+          console.log("\n", Object.values(profile));
+          
+          // console.log("ID: ", profile.id);
+          // console.log("Username: ", profile.login);
+          // console.log("Email: ", profile.email);
+           console.log("Full Name: ", profile.usual_full_name);
           const jwtToken = jwt.sign(
             {
               sub: profile.id,
