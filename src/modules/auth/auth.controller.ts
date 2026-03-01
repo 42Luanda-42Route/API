@@ -23,14 +23,15 @@ export class AuthController {
       const redirectUrl = state+`?token=${token}`;
       console.log("SUCCESSS"+redirectUrl);
       
-      return reply.send({token, user});
-      //return reply.redirect(redirectUrl); 
-      // } catch (error) {
-      //   console.log(error);
+      try {
+      //return reply.send({token, user});
+        return reply.redirect(`${redirectUrl}?token=${token}?user=${JSON.stringify(user)}`); 
+      } catch (error) {
+        console.log("Deu erro: ", error);
         
-      // }
+      }
 }
-
+  
 // Redirect URI do INTRA
  // 42Routes://auth
 //https://four2routeapi.onrender.com/api/auth/42/callback

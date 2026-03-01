@@ -35,14 +35,14 @@ model Cadetes {
 }
 
 model Drivers {
-  id              Int                 @id @default(autoincrement())
-  full_name       String?
-  username        String?             @unique
-  email           String?             @unique
-  passwrd         String?
-  photo           String?
-  phone           Int?
-  coordinates     DriverCoordinates[]
+  id          Int                 @id @default(autoincrement())
+  full_name   String?
+  username    String?             @unique
+  email       String?             @unique
+  passwrd     String?
+  photo       String?
+  phone       Int?
+  coordinates DriverCoordinates[]
   //messages        Message[]           @relation("DriverMessages")
 
   // Rota atual do motorista
@@ -51,20 +51,20 @@ model Drivers {
 }
 
 model MiniBusStop {
-  id        Int         @id @default(autoincrement())
-  stop_name String?     @unique
+  id        Int     @id @default(autoincrement())
+  stop_name String? @unique
   distrit   String?
   latitude  Float?
   longitude Float?
-  route_id Int
-  
-  cadetes   Cadetes[]
-  route Route @relation(fields: [route_id], references: [id])
+  route_id  Int
+
+  cadetes Cadetes[]
+  route   Route     @relation(fields: [route_id], references: [id])
 }
 
 model Route {
-  id         Int          @id @default(autoincrement())
-  route_name String
+  id          Int     @id @default(autoincrement())
+  route_name  String
   description String?
 
   //Liga várias paragens
@@ -75,14 +75,14 @@ model Route {
 }
 
 model Message {
-  id        Int     @id @default(autoincrement())
-  chat_id   Int
-  sender_id Int
+  id         Int    @id @default(autoincrement())
+  chat_id    Int
+  sender_id  Int
   senderType Int
-  content String
+  content    String
 
   createdAt DateTime @default(now())
-  chat  Chat @relation(fields: [chat_id], references: [id])
+  chat      Chat     @relation(fields: [chat_id], references: [id])
 
   //id_driver Int
   //id_cadete Int
@@ -92,10 +92,10 @@ model Message {
   //driver    Drivers @relation("DriverMessages", fields: [id_driver], references: [id])
 }
 
-model Chat{
-  id        Int     @id @default(autoincrement())
+model Chat {
+  id        Int       @id @default(autoincrement())
   full_name String?
-  type  ChatType
+  type      ChatType
   route_id  Int?
   createdAt DateTime  @default(now())
   messages  Message[]
@@ -112,6 +112,6 @@ model DriverCoordinates {
   id        Int     @id @default(autoincrement())
   lat       Float
   long      Float
-  id_driver Int @unique
+  id_driver Int     @unique
   driver    Drivers @relation(fields: [id_driver], references: [id])
 }
