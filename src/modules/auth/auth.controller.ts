@@ -20,7 +20,7 @@ export class AuthController {
 
       console.log("Callback recebido com query: ", request.query);
       const { code, state } = request.query as { code: string, state: string};
-      const { user, token } = await AuthService.handleCallback(code);
+      const { token } = await AuthService.handleCallback(code);
 
       //DEEP LINK DO APP
       const redirectUrl = state;

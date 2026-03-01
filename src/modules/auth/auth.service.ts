@@ -47,37 +47,34 @@ export class AuthService {
           }
 
           const profile = await response.json();
-          JSON.stringify(profile) 
 
-          console.log("\n\n\nPPPPPPPPPPPP"+JSON.stringify(profile, null, 2)+"\n\n\n");
+          const mainCursus = profile.cursus_users.find( (c: any) => c.cursus.name === "42cursus");
+          const courseName = mainCursus?.cursus?.name;
+          const level = mainCursus?.level;
+          const grade = mainCursus?.grade;
+          const avatar = { link: profile.image.link };
+          const full_name =  profile.usual_full_name
           
-          //console.log(Object.keys(profile));
+          console.log("\n\n\nLevel: ", profile.level);
+          console.log("\n\n\n\ngrade", grade);
+          console.log("\n\n\n");
 
-          //console.log("\n", Object.values(profile));
-          
-          // console.log("ID: ", profile.id);
-          // console.log("Username: ", profile.login);
-          // console.log("Email: ", profile.email);
-           console.log("Full Name: ", profile.usual_full_name);
           const jwtToken = jwt.sign(
             {
               sub: profile.id,
+              full_name: full_name,
               username: profile.login,
               email: profile.email,
+              avatar: avatar,
+              course: courseName,
+              level: level,
+              grade: grade,
             },
             process.env.JWT_SECRET as string,
             { expiresIn: "15m" }
           );
 
-          return {
-            user: {
-              name: profile.usual_full_name,
-              username: profile.login,
-              email: profile.email,
-              id: profile.id,
-            },
-            token: jwtToken,
-          };
+          return {token: jwtToken,};
   }
 
 }

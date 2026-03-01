@@ -11,5 +11,6 @@ export interface IUser {
   intraId: number;
   email: string;
   username: string;
+  
   role: string;
 }
