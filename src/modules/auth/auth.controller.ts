@@ -20,14 +20,13 @@ export class AuthController {
 
       console.log("Callback recebido com query: ", request.query);
       const { code, state } = request.query as { code: string, state: string};
-      const { token } = await AuthService.handleCallback(code);
+      const { token, isUser } = await AuthService.handleCallback(code);
 
       //DEEP LINK DO APP
       const redirectUrl = state;
-      console.log("SUCCESSS"+redirectUrl);
       
       try {
-        return reply.redirect(`${redirectUrl}?token=${token}`); 
+        return reply.redirect(`${redirectUrl}?token=${token}&isDBUser=${isUser}`); 
       } catch (error) {
         console.log("Deu erro: ", error);
       }

@@ -1,6 +1,6 @@
 import { oauthConfig } from "./auth.config";
 import OAuth2 from "simple-oauth2";
-import {IntraProfile, IUser} from "../cadetes/cadete.interface"
+import { cadeteService } from "../cadetes/cadete.service";
 import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
 
@@ -59,9 +59,15 @@ export class AuthService {
           console.log("\n\n\n\ngrade", grade);
           console.log("\n\n\n");
 
+          const cadete = await cadeteService.findByUsernameOrEmail(profile.email);
+          let isUser = true;
+          if (!cadete) isUser = false;
+          
+          if (cadete) profile.id = cadete.id;
+
           const jwtToken = jwt.sign(
             {
-              sub: profile.id,
+              id: profile.id,
               full_name: full_name,
               username: profile.login,
               email: profile.email,
@@ -74,7 +80,7 @@ export class AuthService {
             { expiresIn: "15m" }
           );
 
-          return {token: jwtToken,};
+          return {token: jwtToken, isUser };
   }
 
 }

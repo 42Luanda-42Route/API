@@ -29,6 +29,17 @@ export const cadeteService = {
             where: {id}
         });
     },
+
+    async findByUsernameOrEmail(usernameOrEmail: string) {
+        return prisma.admins.findFirst({
+        where: {
+            OR: [
+            { username: usernameOrEmail },
+            { email: usernameOrEmail }
+            ]
+        }
+        })
+    },
     
 
     async getCadeteRouteId(cadete_Id: number){

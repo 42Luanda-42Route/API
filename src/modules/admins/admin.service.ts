@@ -32,14 +32,14 @@ export const adminService = {
         });
     },
     
-    findByUsernameOrEmail(usernameOrEmail: string) {
-    return prisma.admins.findFirst({
-      where: {
-        OR: [
-          { username: usernameOrEmail },
-          { email: usernameOrEmail }
-        ]
-      }
+    async findByUsernameOrEmail(usernameOrEmail: string) {
+        return prisma.admins.findFirst({
+        where: {
+            OR: [
+            { username: usernameOrEmail },
+            { email: usernameOrEmail }
+            ]
+        }
     })
   },
 
