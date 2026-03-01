@@ -75,12 +75,13 @@ export class AuthService {
               course: courseName,
               level: level,
               grade: grade,
+              isDBUser: isUser
             },
             process.env.JWT_SECRET as string,
             { expiresIn: "15m" }
           );
 
-          return {token: jwtToken, isUser };
+          return {token: jwtToken };
   }
 
 }
