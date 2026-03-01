@@ -1,6 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { cadeteService } from "./cadete.service";
 import bcrypt from "bcryptjs";
+import { Cadete } from "./cadete.interface";
 
 
 export const cadetesController = {
@@ -22,22 +23,11 @@ export const cadetesController = {
         const cadete = await cadeteService.findById(req.params.id);
         if (!cadete)
             return reply.status(404).send({ message: "Cadete não encontrado" });
-         const { passwrd, ...safe } = cadete;
-        reply.send(safe);
+        reply.send(cadete);
     },
 
-    async create(req: FastifyRequest<{ Body: {
-        full_name?: string;
-        username: string;
-        email: string;
-        passwrd: string;
-        city?: string;
-        distrit?: string;
-        phone?: number;
-        stop_id?: number;
-        };
-    }>, 
-    reply: FastifyReply) {
+    async create(req: FastifyRequest<{ Body: Cadete }>, reply: FastifyReply)
+    {
         const { passwrd, ...rest } = req.body;
         if (!passwrd || passwrd.length < 8)
             return reply.status(400).send({ message: 'Senha deve ter pelo menos 8 caracteres.' })
@@ -56,20 +46,4 @@ export const cadetesController = {
         await cadeteService.delete(req.params.id);
         reply.status(204).send();
     },
-
-    async login(
-    req: FastifyRequest<{ Body: { usernameOrEmail: string; passwrd: string } }>,
-    reply: FastifyReply
-  ) {
-    const { usernameOrEmail, passwrd } = req.body
-    const user = await cadeteService.findByUsernameOrEmail(usernameOrEmail)
-
-    if (!user) return reply.status(401).send({ message: 'Credenciais inválidas' })
-
-    const ok = await bcrypt.compare(passwrd, user.passwrd ?? '')
-    if (!ok) return reply.status(401).send({ message: 'Credenciais inválidas' })
-
-    const { passwrd: _omit, ...safe } = user
-    return reply.send({ user: safe /*, token*/ })
-  }
 };

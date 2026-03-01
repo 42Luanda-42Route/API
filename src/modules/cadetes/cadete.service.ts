@@ -4,11 +4,14 @@ const prisma = new PrismaClient();
 
 export const cadeteService = {
     async findAll(){
-        return prisma.cadetes.findMany();
+        return prisma.cadetes.findMany({omit: { passwrd: true }});
     },
 
     async findById(id: number){
-        return prisma.cadetes.findUnique({where: {id}});
+        return prisma.cadetes.findUnique({
+            where: {id},
+            omit: { passwrd: true}
+        });
     },
 
     async create(data: any){
@@ -27,16 +30,6 @@ export const cadeteService = {
         });
     },
     
-    async findByUsernameOrEmail(usernameOrEmail: string) {
-      return prisma.cadetes.findFirst({
-        where: {
-          OR: [
-            { username: usernameOrEmail },
-            { email: usernameOrEmail }
-          ]
-        }
-      })
-    },
 
     async getCadeteRouteId(cadete_Id: number){
         cadete_Id = Number(cadete_Id);

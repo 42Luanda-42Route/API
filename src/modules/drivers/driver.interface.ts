@@ -7,3 +7,11 @@ export interface loginDriver {
     username: string;
     password: string;
 }
+
+export interface Driver{
+    full_name?: string;
+    username: string;
+    email: string;
+    passwrd: string;
+    phone?: number;
+}

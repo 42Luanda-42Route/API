@@ -1,12 +1,12 @@
-
-import { FastifyInstance } from 'fastify';
 export interface Cadete {
-    id: number;
-    name: string;
+    full_name?: string;
+    username: string;
     email: string;
-    phone: string;
-    passwrd: string; 
-    created_at: Date;
+    passwrd: string;
+    city?: string;
+    distrit?: string;
+    phone?: number;
+    stop_id?: number;
 }
 export interface IntraProfile {
   id: number;

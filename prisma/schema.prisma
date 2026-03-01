@@ -17,7 +17,7 @@ model Admins {
   full_name String?
   username  String? @unique
   email     String? @unique
-  passwrd   String?
+  password   String?
 }
 
 model Cadetes {
@@ -27,7 +27,6 @@ model Cadetes {
   email          String?      @unique
   city           String?
   distrit        String?
-  passwrd        String?
   prioritityList Boolean      @default(false)
   phone          Int?
   stop_id        Int?

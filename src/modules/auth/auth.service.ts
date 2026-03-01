@@ -34,8 +34,6 @@ export class AuthService {
             grant_type: "authorization_code",
             
           };
-
-          console.log("\n\n\n"+oauthConfig.redirectUri+"\n\\n\n");
           
           const accessToken: any = await client.getToken(tokenParams);
           const intraToken = accessToken.token.access_token as string;
@@ -69,5 +67,6 @@ export class AuthService {
             },
             token: jwtToken,
           };
-        }
+  }
+
 }

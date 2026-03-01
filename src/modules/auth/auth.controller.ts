@@ -2,6 +2,8 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { AuthService } from "./auth.service";
 import { driverService } from "../drivers/driver.service";
 import { loginDriver } from "../drivers/driver.interface";
+import { adminService } from "../admins/admin.service";
+import { loginAdmin } from "../admins/admin.interface";
 
 export class AuthController {
   static async redirectTo42(request: FastifyRequest, reply: FastifyReply) 
@@ -40,5 +42,15 @@ export class AuthController {
 
     return driver;
   }
+
+   static async loginAdmin( req: FastifyRequest<{ Body: loginAdmin }>, reply: FastifyReply ) 
+   {
+      const { username, password, email } = req.body;
+      const admin = await adminService.login(username, password)
+
+      if (!admin) return reply.send({"message": "User or email not found"}).status(404);
+
+      return admin;
+   }
 
 }
