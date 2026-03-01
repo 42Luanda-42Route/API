@@ -50,7 +50,6 @@ export class AuthService {
 
           const profile = await response.json();
 
-          // 🔐 JWT DA TUA API (não do Intra)
           const jwtToken = jwt.sign(
             {
               sub: profile.id,
@@ -71,5 +70,4 @@ export class AuthService {
             token: jwtToken,
           };
         }
-
 }

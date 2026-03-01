@@ -1,6 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { AuthService } from "./auth.service";
-import { log } from "console";
+import { driverService } from "../drivers/driver.service";
+import { loginDriver } from "../drivers/driver.interface";
 
 export class AuthController {
   static async redirectTo42(request: FastifyRequest, reply: FastifyReply) 
@@ -12,51 +13,32 @@ export class AuthController {
   }
 
   
-    static async callback42(request: FastifyRequest, reply: FastifyReply) {
-     // try {
+  static async callback42(request: FastifyRequest, reply: FastifyReply) {
+  
 
-     log("Callback recebido com query: ", request.query);
-       const { code, state } = request.query as { code: string, state: string};
-      //const  mobileRedirectURL =  request.params;
-      console.log("YYYYYYYYYYYYYY:"+state);
-
+      console.log("Callback recebido com query: ", request.query);
+      const { code, state } = request.query as { code: string, state: string};
       const { user, token } = await AuthService.handleCallback(code);
 
-      // 🔗 DEEP LINK DO APP
-      const redirectUrl = state || 'routes42://auth';
+      //DEEP LINK DO APP
+      const redirectUrl = state;
       console.log("SUCCESSS"+redirectUrl);
       
       try {
-      //return reply.send({token, user});
-        return reply.redirect(`${redirectUrl}?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`); 
+        return reply.redirect(`${redirectUrl}?token=${token}`); 
       } catch (error) {
         console.log("Deu erro: ", error);
-        
       }
-}
+  }
 
+  static async loginDriver(req: FastifyRequest<{ Body: loginDriver}>, reply: FastifyReply)
+  {
+    const {username, password, email} = req.body;
+    const driver = await driverService.login(username, password)
 
+    if (!driver) return reply.send({"message": "User or email not found"}).status(404);
 
+    return driver;
+  }
 
-
-
-
-
-
-
-
-
-// Redirect URI do INTRA
- // 42Routes://auth
-//https://four2routeapi.onrender.com/api/auth/42/callback
-  
-    /*static async callback42(request: FastifyRequest, reply: FastifyReply) {
-    const { code } = request.query as { code: string };
-    //const { user, token } = await AuthService.handleCallback(code);
-    const { token } = await AuthService.handleCallback(code);
-    //return reply.send({ user, token });
-    
-    console.log(token);
-    return reply.send({token });
-  }*/
 }

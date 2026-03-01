@@ -21,16 +21,17 @@ model Admins {
 }
 
 model Cadetes {
-  id        Int          @id @default(autoincrement())
-  full_name String?
-  username  String?      @unique
-  email     String?      @unique
-  city      String?
-  distrit   String?
-  passwrd   String?
-  phone     Int?
-  stop_id   Int?
-  stop      MiniBusStop? @relation(fields: [stop_id], references: [id])
+  id             Int          @id @default(autoincrement())
+  full_name      String?
+  username       String?      @unique
+  email          String?      @unique
+  city           String?
+  distrit        String?
+  passwrd        String?
+  prioritityList Boolean      @default(false)
+  phone          Int?
+  stop_id        Int?
+  stop           MiniBusStop? @relation(fields: [stop_id], references: [id])
   //messages  Message[]    @relation("CadeteMessages")
 }
 

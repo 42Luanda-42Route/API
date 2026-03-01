@@ -1,9 +1,45 @@
 import { PrismaClient } from "@prisma/client";
 import { AssignRouteDTO } from "./driver.interface";
-
+import bcrypt from "bcryptjs";
+import jwt  from "jsonwebtoken";
 const prisma = new PrismaClient();
 
 export const driverService = {
+
+    async findUsernameOrEmail(usernameOrEmail: string)
+    {
+        return await prisma.drivers.findFirst({where:{
+          OR:[
+            {username: usernameOrEmail},
+            {email: usernameOrEmail}
+          ]
+      }});
+    },
+
+
+    async login(username: string, password: string)
+    {
+      const isDriver = await this.findUsernameOrEmail(username);
+
+      if (!isDriver) return { "message": "username or email not found"};
+
+      const ok = await bcrypt.compare(password, isDriver.passwrd ?? '');
+      if(!ok) return {"message": "Credenciais erradas"};
+
+      const jwtToken = jwt.sign(
+        {
+          id: isDriver.id,
+          username: isDriver.username,
+          email: isDriver.email,
+        }, 
+        process.env.JWT_SECRET as string,
+        { expiresIn: "15m" }
+      );
+
+      return { token: jwtToken};
+
+    },
+
     async findAll(){
         return prisma.drivers.findMany();
     },

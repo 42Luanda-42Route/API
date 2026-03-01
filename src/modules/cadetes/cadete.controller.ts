@@ -15,14 +15,14 @@ export const cadetesController = {
 
     async getAll(req: FastifyRequest, reply: FastifyReply) {
         const cadetes = await cadeteService.findAll();
-        return reply.send(cadetes)
+        return reply.status(201).send(cadetes)
     },
 
     async getById(req: FastifyRequest<{ Params: { id: number } }>, reply: FastifyReply) {
         const cadete = await cadeteService.findById(req.params.id);
         if (!cadete)
             return reply.status(404).send({ message: "Cadete não encontrado" });
-        const { passwrd, ...safe } = cadete;
+         const { passwrd, ...safe } = cadete;
         reply.send(safe);
     },
 
@@ -69,8 +69,6 @@ export const cadetesController = {
     const ok = await bcrypt.compare(passwrd, user.passwrd ?? '')
     if (!ok) return reply.status(401).send({ message: 'Credenciais inválidas' })
 
-    // se tiver @fastify/jwt registrado, pode emitir token aqui:
-    // const token = reply.jwtSign({ sub: user.id, role: 'cadete' })
     const { passwrd: _omit, ...safe } = user
     return reply.send({ user: safe /*, token*/ })
   }
