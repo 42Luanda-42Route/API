@@ -2,6 +2,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { cadeteService } from "./cadete.service";
 import bcrypt from "bcryptjs";
 import { Cadete } from "./cadete.interface";
+import { ne } from "@faker-js/faker/.";
 
 
 export const cadetesController = {
@@ -33,9 +34,8 @@ export const cadetesController = {
             return reply.status(400).send({ message: 'Senha deve ter pelo menos 8 caracteres.' })
         
         const hashedPassword = await bcrypt.hash(passwrd, 10);
-        const newCadete = await cadeteService.create({...rest, passwrd: hashedPassword });
-        const { passwrd: _omit, ...safeCadete } = newCadete;
-        reply.status(201).send(safeCadete);
+        const newCadete = await cadeteService.create({...rest, password: hashedPassword });
+        reply.status(201).send(newCadete);
     },
 
     async update(req: FastifyRequest<{ Params: { id: number }, Body: any }>, reply: FastifyReply) {

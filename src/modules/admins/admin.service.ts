@@ -6,13 +6,13 @@ const prisma = new PrismaClient();
 
 export const adminService = {
     async findAll(){
-        return prisma.admins.findMany({ omit: { passwrd: true }});
+        return prisma.admins.findMany(/*{ omit: { passwrd: true } }*/);
     },
 
     async findById(id: number){
         return prisma.admins.findUnique({
             where: {id}, 
-            omit: { passwrd: true}
+            omit: { password: true}
         });
     },
 
@@ -49,7 +49,7 @@ export const adminService = {
   
         if (!isAdmin) return { "message": "username or email not found"};
   
-        const ok = await bcrypt.compare(password, isAdmin.passwrd ?? '');
+        const ok = await bcrypt.compare(password, isAdmin.password ?? '');
         if(!ok) return {"message": "Credenciais erradas"};
   
         const jwtToken = jwt.sign(

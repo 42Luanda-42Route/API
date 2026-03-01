@@ -4,13 +4,12 @@ const prisma = new PrismaClient();
 
 export const cadeteService = {
     async findAll(){
-        return prisma.cadetes.findMany({omit: { passwrd: true }});
+        return prisma.cadetes.findMany();
     },
 
     async findById(id: number){
         return prisma.cadetes.findUnique({
             where: {id},
-            omit: { passwrd: true}
         });
     },
 

@@ -13,11 +13,12 @@ datasource db {
 }
 
 model Admins {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   full_name String?
-  username  String? @unique
-  email     String? @unique
-  password   String?
+  username  String?  @unique
+  email     String?  @unique
+  password  String?
+  createdAt DateTime @default(now())
 }
 
 model Cadetes {
@@ -32,6 +33,7 @@ model Cadetes {
   stop_id        Int?
   stop           MiniBusStop? @relation(fields: [stop_id], references: [id])
   //messages  Message[]    @relation("CadeteMessages")
+  createdAt      DateTime     @default(now())
 }
 
 model Drivers {
@@ -48,24 +50,29 @@ model Drivers {
   // Rota atual do motorista
   current_route_id Int?
   current_route    Route? @relation(fields: [current_route_id], references: [id])
+
+  createdAt DateTime @default(now())
 }
 
 model MiniBusStop {
-  id        Int     @id @default(autoincrement())
-  stop_name String? @unique
-  distrit   String?
-  latitude  Float?
-  longitude Float?
-  route_id  Int
+  id          Int      @id @default(autoincrement())
+  stop_name   String?  @unique
+  distrit     String?
+  latitude    Float?
+  longitude   Float?
+  description String?
+  route_id    Int
+  createdAt   DateTime @default(now())
 
   cadetes Cadetes[]
   route   Route     @relation(fields: [route_id], references: [id])
 }
 
 model Route {
-  id          Int     @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   route_name  String
   description String?
+  createdAt   DateTime @default(now())
 
   //Liga várias paragens
   stops MiniBusStop[]
@@ -109,9 +116,10 @@ enum ChatType {
 }
 
 model DriverCoordinates {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   lat       Float
   long      Float
-  id_driver Int     @unique
-  driver    Drivers @relation(fields: [id_driver], references: [id])
+  id_driver Int      @unique
+  createdAt DateTime @default(now())
+  driver    Drivers  @relation(fields: [id_driver], references: [id])
 }

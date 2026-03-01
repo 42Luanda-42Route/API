@@ -3,7 +3,7 @@ export interface Admin {
     full_name?: string;
     username: string;
     email: string;
-    passwrd: string;
+    password: string;
     phone?: number;
 }
 

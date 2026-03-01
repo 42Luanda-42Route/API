@@ -44,9 +44,13 @@ export const routeService = {
         stops: {
           include: {
             route: true
-          }
-        }
+          },
+        },
+        drivers: {
+          omit: { passwrd: true }
+        },
       }
+     
     });
   },
 

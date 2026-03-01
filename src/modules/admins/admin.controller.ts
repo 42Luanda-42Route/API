@@ -20,13 +20,13 @@ export const adminsController = {
     },
 
     async create(req: FastifyRequest<{ Body: Admin }>,  reply: FastifyReply) {
-        const { passwrd, ...rest } = req.body;
-        if (!passwrd || passwrd.length < 8) return reply.status(400).send({ message: 'Senha deve ter pelo menos 8 caracteres.' })
+        const { password, ...rest } = req.body;
+        if (!password || password.length < 8) return reply.status(400).send({ message: 'Senha deve ter pelo menos 8 caracteres.' })
         
-        const hashedPassword = await bcrypt.hash(passwrd, 10);
-        const newadmin = await adminService.create({...rest, passwrd: hashedPassword });
-        const { passwrd: _omit, ...safeadmin } = newadmin;
-        reply.status(201).send(safeadmin);
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newadmin = await adminService.create({...rest, password: hashedPassword });
+        //const { password: _omit, ...safeadmin } = newadmin;
+        reply.status(201).send(newadmin);
     },
 
     async update(req: FastifyRequest<{ Params: { id: number }, Body: any }>, reply: FastifyReply) {

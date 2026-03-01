@@ -25,11 +25,15 @@
             "null"
           ]
         },
-        "passwrd": {
+        "password": {
           "type": [
             "string",
             "null"
           ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -69,11 +73,9 @@
             "null"
           ]
         },
-        "passwrd": {
-          "type": [
-            "string",
-            "null"
-          ]
+        "prioritityList": {
+          "type": "boolean",
+          "default": false
         },
         "phone": {
           "type": [
@@ -90,6 +92,10 @@
               "type": "null"
             }
           ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -150,6 +156,10 @@
               "type": "null"
             }
           ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -183,6 +193,16 @@
             "null"
           ]
         },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
         "cadetes": {
           "type": "array",
           "items": {
@@ -208,6 +228,10 @@
             "string",
             "null"
           ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         },
         "stops": {
           "type": "array",
@@ -295,6 +319,10 @@
         },
         "long": {
           "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         },
         "driver": {
           "$ref": "#/definitions/Drivers"
