@@ -51,9 +51,9 @@ export class AuthService {
 
           console.log("\n\n\nPPPPPPPPPPPP"+JSON.stringify(profile, null, 2)+"\n\n\n");
           
-          console.log(Object.keys(profile));
+          //console.log(Object.keys(profile));
 
-          console.log("\n", Object.values(profile));
+          //console.log("\n", Object.values(profile));
           
           // console.log("ID: ", profile.id);
           // console.log("Username: ", profile.login);
