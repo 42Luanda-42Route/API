@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: 42route_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: 42route
+      POSTGRES_PASSWORD: 42route123
+      POSTGRES_DB: 42route_db
+    ports:
+      - "54321:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    container_name: 42route_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    command: npx ts-node src/main.ts
+
+volumes:
+  postgres_data:

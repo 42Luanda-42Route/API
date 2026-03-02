@@ -1,10 +1,14 @@
 import { FastifyInstance } from "fastify";
 import { driversController } from "./driver.controller";
 import { autoDocs } from '../../utils/docs';
+import { authenticate } from "../auth/auth.middleware";
 const docs = autoDocs('Drivers', 'Motoristas');
 
 
 export default async function driverRoutes(app: FastifyInstance) {
+    
+    app.addHook("preHandler", authenticate);
+    
     app.get('/drivers',       { schema: docs.list },  driversController.getAll);
     app.get('/driver/:id',    { schema: docs.get },    driversController.getById);
     app.post('/driver',       { schema: docs.create }, driversController.create);

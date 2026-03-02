@@ -75,7 +75,8 @@ export class AuthService {
               course: courseName,
               level: level,
               grade: grade,
-              isDBUser: isUser
+              isDBUser: isUser,
+              role: "CADETE"
             },
             process.env.JWT_SECRET as string,
             { expiresIn: "15m" }

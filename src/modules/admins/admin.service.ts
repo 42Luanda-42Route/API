@@ -57,6 +57,7 @@ export const adminService = {
             id: isAdmin.id,
             username: isAdmin.username,
             email: isAdmin.email,
+            role: "ADMIN"
           }, 
           process.env.JWT_SECRET as string,
           { expiresIn: "15m" }

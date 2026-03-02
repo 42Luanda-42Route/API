@@ -11,9 +11,11 @@ import driversRoutes from "./modules/drivers/driver.routes";
 import authRoutes from "./modules/auth/auth.routes";
 import minibusstopsRoutes from "./modules/miniBusStops/miniBusStops.routes";
 import routeRoutes from "./modules/routes/route.routes";
+import { initSocket } from "./WebSockets/socket";
+import fastifyJwt from "@fastify/jwt";
 import "dotenv/config";
 
-import { initSocket } from "./WebSockets/socket";
+
 
 export async function buildApp() {
   const app = Fastify({ logger: true });
@@ -73,6 +75,10 @@ export async function buildApp() {
 
   initSocket(app);
   
+  app.register(fastifyJwt, {
+    secret: process.env.JWT_SECRET as string,
+    sign: { expiresIn: process.env.JWT_EXPIRES || "1h" },
+  });
   app.register(authRoutes, { prefix: "/api"});
   app.register(routeRoutes, { prefix: "/api" });
   app.register(adminRoutes, { prefix: "/api" });

@@ -35,8 +35,11 @@ export const driverService = {
       const jwtToken = jwt.sign(
         {
           id: isDriver.id,
+          full_name: isDriver.full_name,
           username: isDriver.username,
           email: isDriver.email,
+          phone: isDriver.phone,
+          role: "DRIVER"
         }, 
         process.env.JWT_SECRET as string,
         { expiresIn: "15m" }
