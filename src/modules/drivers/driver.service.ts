@@ -61,7 +61,7 @@ export const driverService = {
     async updateLocation( id_driver: number, data: { lat: number; long: number }) {
       try {
         const existing = await prisma.driverCoordinates.findFirst({
-          where: { id_driver },
+          where: { id_driver: Number(id_driver) },
         });
 
         if (!existing) {
