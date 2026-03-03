@@ -48,7 +48,7 @@ export const driversController = {
             id_driver: req.params.id,
             ...req.body
         });
-
+        
         reply.send(driverLocation);
     },
 

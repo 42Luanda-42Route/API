@@ -7,7 +7,7 @@ const docs = autoDocs('Drivers', 'Motoristas');
 
 export default async function driverRoutes(app: FastifyInstance) {
     
-    app.addHook("preHandler", authenticate);
+    //app.addHook("preHandler", authenticate);
     
     app.get('/drivers',       { schema: docs.list },  driversController.getAll);
     app.get('/driver/:id',    { schema: docs.get },    driversController.getById);
