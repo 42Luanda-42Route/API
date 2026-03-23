@@ -2,7 +2,6 @@ import { Server } from "socket.io"
 import { FastifyInstance } from "fastify"
 import { PrismaClient } from "@prisma/client"
 import { RouteLocationState } from "../modules/routes/route.interface";
-import { ro } from "@faker-js/faker/.";
 
 const prisma = new PrismaClient();
 
@@ -29,6 +28,7 @@ export function initSocket(app: FastifyInstance){
             origin: "*"
         }
     });
+    (app.server as any).io = io;
 
 
     io.on("connection", (socket) =>{
@@ -142,7 +142,13 @@ export function initSocket(app: FastifyInstance){
    
             const driver = await prisma.drivers.findUnique({ where: {id: id_driver}});
 
-            if (!driver?.current_route_id) return "Driver is not assign to one route. Please assign one route first";
+            if (!driver?.current_route_id) {
+                socket.emit("socket:error", {
+                    event: "driver:updateLocation",
+                    message: "Driver is not assigned to any route."
+                });
+                return;
+            }
 
 
 
@@ -205,11 +211,23 @@ export function initSocket(app: FastifyInstance){
             });
 
             const routeId = cadete?.stop?.route?.id;
-            if (!routeId) return `routeId: ${routeId} does not exists.`;
+            if (!routeId) {
+                socket.emit("socket:error", {
+                    event: "cadete:updateLocation",
+                    message: `routeId: ${routeId} does not exist.`
+                });
+                return;
+            }
 
             // Verifica se o motorista esta activo
 
-            if (isDriveActive(routeId)) return "Motorista está ativo nesta rota, Obrigado pela sua contribuição";
+            if (isDriveActive(routeId)) {
+                socket.emit("socket:ignored", {
+                    event: "cadete:updateLocation",
+                    message: "Motorista está ativo nesta rota."
+                });
+                return;
+            }
 
             routeLocationState[routeId] = {
                 source: "cadete",
