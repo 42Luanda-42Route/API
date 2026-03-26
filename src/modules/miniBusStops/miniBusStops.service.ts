@@ -1,6 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../infrastructure/database/prismaClient";
 
-const prisma = new PrismaClient();
 
 export const miniBusStopService = {
     async findAll(){

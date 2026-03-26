@@ -1,7 +1,17 @@
 import { PrismaClient } from "@prisma/client";
 import { faker } from "@faker-js/faker";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+const DEFAULT_PASSWORD = "12345678";
+
+const ROUTE_SEEDS = [
+  { route_name: "Mutamba - Cazenga", description: "Linha principal centro-cidade." },
+  { route_name: "Ingombota - Viana", description: "Liga zona urbana a Viana." },
+  { route_name: "Maianga - Benfica", description: "Fluxo residencial e comercial." },
+  { route_name: "Kilamba - Largo", description: "Ligacao periurbana." },
+];
 
 // Coordenadas em Luanda
 function generateLuandaCoordinates() {
@@ -11,13 +21,7 @@ function generateLuandaCoordinates() {
   };
 }
 
-async function main() {
-  console.log("🌱 Seeding database...");
-
-  /* =========================
-     LIMPEZA (ordem correta)
-  ========================= */
-
+async function cleanDatabase() {
   await prisma.message.deleteMany();
   await prisma.chat.deleteMany();
   await prisma.driverCoordinates.deleteMany();
@@ -26,121 +30,236 @@ async function main() {
   await prisma.miniBusStop.deleteMany();
   await prisma.route.deleteMany();
   await prisma.admins.deleteMany();
+}
 
-  /* =========================
-     ADMIN
-  ========================= */
-
-  await prisma.admins.create({
-    data: {
-      full_name: "Admin Geral",
-      username: "admin",
-      email: "admin@email.com",
-      passwrd: "123456",
-    },
+async function seedAdmins(passwordHash: string) {
+  return prisma.admins.createMany({
+    data: [
+      {
+        full_name: "Admin Geral",
+        username: "admin",
+        email: "admin@42route.com",
+        password: passwordHash,
+      },
+      {
+        full_name: "Gestor Operacional",
+        username: "ops_admin",
+        email: "ops@42route.com",
+        password: passwordHash,
+      },
+    ],
   });
+}
 
-  /* =========================
-     ROTAS (4)
-  ========================= */
+async function seedRoutes() {
+  const createdRoutes = [] as Array<{ id: number; route_name: string }>;
 
-  const routes = await Promise.all(
-    Array.from({ length: 4 }).map(() =>
-      prisma.route.create({
-        data: {
-          route_name: faker.location.street(),
-          description: faker.lorem.sentence(),
-        },
-      })
-    )
-  );
+  for (const route of ROUTE_SEEDS) {
+    const created = await prisma.route.create({ data: route });
+    createdRoutes.push({ id: created.id, route_name: created.route_name });
+  }
 
-  /* =========================
-     PARAGENS (20)
-     Cada paragem pertence a UMA rota
-  ========================= */
+  return createdRoutes;
+}
 
-  const stops = await Promise.all(
-    Array.from({ length: 20 }).map(() => {
+async function seedStops(routes: Array<{ id: number; route_name: string }>) {
+  const createdStops = [] as Array<{ id: number; route_id: number }>;
+
+  for (const route of routes) {
+    for (let i = 1; i <= 4; i++) {
       const coords = generateLuandaCoordinates();
-      const route = faker.helpers.arrayElement(routes);
-
-      return prisma.miniBusStop.create({
+      const stop = await prisma.miniBusStop.create({
         data: {
-          stop_name: faker.location.street(),
-          distrit: faker.location.city(),
+          stop_name: `${route.route_name} - Paragem ${i}`,
+          distrit: faker.helpers.arrayElement([
+            "Maianga",
+            "Ingombota",
+            "Samba",
+            "Talatona",
+            "Viana",
+            "Cazenga",
+          ]),
           latitude: coords.latitude,
           longitude: coords.longitude,
+          description: `Paragem ${i} da rota ${route.route_name}`,
           route_id: route.id,
         },
       });
-    })
-  );
 
-  /* =========================
-     MOTORISTAS (3)
-  ========================= */
+      createdStops.push({ id: stop.id, route_id: stop.route_id });
+    }
+  }
 
-  const drivers = await Promise.all(
-    Array.from({ length: 3 }).map(() => {
-      const route = faker.helpers.arrayElement(routes);
+  return createdStops;
+}
 
-      return prisma.drivers.create({
-        data: {
-          full_name: faker.person.fullName(),
-          username: faker.internet.username(),
-          email: faker.internet.email(),
-          passwrd: "123456",
-          phone: faker.number.int({ min: 900000000, max: 999999999 }),
-          current_route_id: route.id,
+async function seedDrivers(
+  routes: Array<{ id: number; route_name: string }>,
+  passwordHash: string
+) {
+  const createdDrivers = [] as Array<{ id: number; current_route_id: number | null }>;
+
+  for (let i = 0; i < routes.length; i++) {
+    const route = routes[i];
+    const driver = await prisma.drivers.create({
+      data: {
+        full_name: faker.person.fullName(),
+        username: `driver_${i + 1}`,
+        email: `driver_${i + 1}@42route.com`,
+        passwrd: passwordHash,
+        phone: faker.number.int({ min: 900000000, max: 999999999 }),
+        photo: `https://api.dicebear.com/9.x/identicon/svg?seed=driver_${i + 1}`,
+        current_route_id: route.id,
+      },
+    });
+
+    createdDrivers.push({ id: driver.id, current_route_id: driver.current_route_id });
+  }
+
+  return createdDrivers;
+}
+
+async function seedDriverCoordinates(drivers: Array<{ id: number }>) {
+  for (const driver of drivers) {
+    const coords = generateLuandaCoordinates();
+    await prisma.driverCoordinates.create({
+      data: {
+        id_driver: driver.id,
+        lat: coords.latitude,
+        long: coords.longitude,
+      },
+    });
+  }
+}
+
+async function seedCadetes(stops: Array<{ id: number }>) {
+  for (let i = 0; i < 24; i++) {
+    const stop = stops[i % stops.length];
+    await prisma.cadetes.create({
+      data: {
+        full_name: faker.person.fullName(),
+        username: `cadete_${i + 1}`,
+        email: `cadete_${i + 1}@student.42luanda.ao`,
+        city: "Luanda",
+        distrit: faker.helpers.arrayElement([
+          "Maianga",
+          "Ingombota",
+          "Samba",
+          "Talatona",
+          "Viana",
+          "Cazenga",
+        ]),
+        phone: faker.number.int({ min: 900000000, max: 999999999 }),
+        prioritityList: i % 5 === 0,
+        stop_id: stop.id,
+      },
+    });
+  }
+
+  return prisma.cadetes.findMany({
+    select: {
+      id: true,
+      stop_id: true,
+    },
+  });
+}
+
+async function seedChatsAndMessages(
+  routes: Array<{ id: number }>,
+  drivers: Array<{ id: number; current_route_id: number | null }>,
+  cadetes: Array<{ id: number; stop_id: number | null }>
+) {
+  const generalChat = await prisma.chat.create({
+    data: {
+      full_name: "Canal Geral 42Route",
+      type: "GENERAL",
+      route_id: null,
+    },
+  });
+
+  for (const route of routes) {
+    await prisma.chat.create({
+      data: {
+        full_name: `Canal da Rota ${route.id}`,
+        type: "ROUTE",
+        route_id: route.id,
+      },
+    });
+  }
+
+  const routeChats = await prisma.chat.findMany({ where: { type: "ROUTE" } });
+
+  const firstDriver = drivers[0];
+  const firstCadete = cadetes[0];
+
+  if (firstDriver && firstCadete) {
+    await prisma.message.createMany({
+      data: [
+        {
+          chat_id: generalChat.id,
+          sender_id: firstDriver.id,
+          senderType: 1,
+          content: "Bem-vindos ao canal geral do 42Route.",
         },
-      });
-    })
-  );
-
-  /* =========================
-     COORDENADAS DOS MOTORISTAS
-  ========================= */
-
-  await Promise.all(
-    drivers.map(driver => {
-      const coords = generateLuandaCoordinates();
-
-      return prisma.driverCoordinates.create({
-        data: {
-          lat: coords.latitude,
-          long: coords.longitude,
-          id_driver: driver.id,
+        {
+          chat_id: generalChat.id,
+          sender_id: firstCadete.id,
+          senderType: 0,
+          content: "Obrigado. Sistema de rotas operacional.",
         },
-      });
-    })
-  );
+      ],
+    });
+  }
 
-  /* =========================
-     CADETES (50)
-     Cadete → Paragem → Rota
-  ========================= */
+  for (const routeChat of routeChats) {
+    const driver = drivers.find((d) => d.current_route_id === routeChat.route_id);
+    const cadete = cadetes.find((c) => c.stop_id !== null);
 
-  await Promise.all(
-    Array.from({ length: 50 }).map(() => {
-      const stop = faker.helpers.arrayElement(stops);
+    if (!driver || !cadete) continue;
 
-      return prisma.cadetes.create({
-        data: {
-          full_name: faker.person.fullName(),
-          username: faker.internet.username(),
-          email: faker.internet.email(),
-          city: faker.location.city(),
-          distrit: faker.location.city(),
-          phone: faker.number.int({ min: 900000000, max: 999999999 }),
-          passwrd: "123456",
-          stop_id: stop.id,
+    await prisma.message.createMany({
+      data: [
+        {
+          chat_id: routeChat.id,
+          sender_id: driver.id,
+          senderType: 1,
+          content: `Motorista ativo na rota ${routeChat.route_id}.`,
         },
-      });
-    })
-  );
+        {
+          chat_id: routeChat.id,
+          sender_id: cadete.id,
+          senderType: 0,
+          content: `Cadete aguardando transporte na rota ${routeChat.route_id}.`,
+        },
+      ],
+    });
+  }
+}
 
-  console.log("✅ Seed concluído com sucesso!");
+async function main() {
+  console.log("🌱 Seeding database...");
+  faker.seed(42042);
+
+  const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+
+  await cleanDatabase();
+  await seedAdmins(passwordHash);
+
+  const routes = await seedRoutes();
+  const stops = await seedStops(routes);
+  const drivers = await seedDrivers(routes, passwordHash);
+
+  await seedDriverCoordinates(drivers);
+
+  const cadetes = await seedCadetes(stops);
+  await seedChatsAndMessages(routes, drivers, cadetes);
+
+  console.log("✅ Seed concluido com sucesso!");
+  console.log(`Admins: 2`);
+  console.log(`Routes: ${routes.length}`);
+  console.log(`Stops: ${stops.length}`);
+  console.log(`Drivers: ${drivers.length}`);
+  console.log(`Cadetes: ${cadetes.length}`);
 }
 
 main()

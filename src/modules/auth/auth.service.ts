@@ -2,9 +2,8 @@ import { oauthConfig } from "./auth.config";
 import OAuth2 from "simple-oauth2";
 import { cadeteService } from "../cadetes/cadete.service";
 import jwt from "jsonwebtoken";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../infrastructure/database/prismaClient";
 
-const prisma = new PrismaClient();
 const client = new OAuth2.AuthorizationCode({
   client: {
     id: oauthConfig.client.id,

@@ -1,6 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../infrastructure/database/prismaClient";
 
-const prisma = new PrismaClient();
+// Shared Prisma client imported from infrastructure layer
 
 export const cadeteService = {
     async findAll(){

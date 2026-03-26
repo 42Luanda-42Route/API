@@ -1,8 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../infrastructure/database/prismaClient";
 import  jwt  from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
 
 export const adminService = {
     async findAll(){

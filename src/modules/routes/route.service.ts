@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../infrastructure/database/prismaClient";
 import { Routes, RouteStops } from "./route.interface";
-
-const prisma = new PrismaClient();
 
 export const routeService = {
 

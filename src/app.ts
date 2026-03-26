@@ -10,7 +10,7 @@ import cadeteRoutes from "./modules/cadetes/cadete.routes";
 import driversRoutes from "./modules/drivers/driver.routes";
 import authRoutes from "./modules/auth/auth.routes";
 import minibusstopsRoutes from "./modules/miniBusStops/miniBusStops.routes";
-import routeRoutes from "./modules/routes/route.routes";
+import routeRoutes from "./interfaces/http/routes/route.routes";
 import { initSocket } from "./WebSockets/socket";
 import fastifyJwt from "@fastify/jwt";
 import "dotenv/config";

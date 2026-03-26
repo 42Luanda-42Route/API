@@ -1,0 +1,36 @@
+[socket-test] baseUrl: http://127.0.0.1:3000
+[socket-test] using ids: { driverId: 1, cadeteId: 1, routeId: 1 }
+[socket-test] driver connected
+[socket-test] cadete connected
+[socket-test] invalid driver received socket:error {
+  event: 'driver:updateLocation',
+  message: 'Driver is not assigned to any route.'
+}
+[socket-test] cadete received driver:location {
+  id_driver: 1,
+  lat: -8.83833,
+  long: 13.23444,
+  routeId: 1,
+  driverName: 'Jody Bechtelar'
+}
+[socket-test] cadete received socket:ignored {
+  event: 'cadete:updateLocation',
+  message: 'Motorista está ativo nesta rota.'
+}
+[socket-test] cadete received transport:location {
+  cadeteId: 1,
+  lat: -8.831,
+  long: 13.241,
+  source: 'cadete',
+  routeId: 1,
+  cadeteName: 'Dr. Everett Shanahan'
+}
+[socket-test] state: {
+  connectedDriver: true,
+  connectedCadete: true,
+  gotDriverLocation: true,
+  gotIgnoredFromCadete: true,
+  gotTransportLocation: true,
+  gotSocketError: true
+}
+[socket-test] PASS

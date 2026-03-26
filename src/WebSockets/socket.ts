@@ -1,9 +1,8 @@
 import { Server } from "socket.io"
 import { FastifyInstance } from "fastify"
-import { PrismaClient } from "@prisma/client"
+import prisma from "../infrastructure/database/prismaClient";
 import { RouteLocationState } from "../modules/routes/route.interface";
 
-const prisma = new PrismaClient();
 
 const routeLocationState: Record <number, RouteLocationState> = {};
 
@@ -88,7 +87,8 @@ export function initSocket(app: FastifyInstance){
                     }
                 }
             });
-
+            // if(!cadete)
+            //     throw NotfoudExpt
             const cadeteRouteId = cadete?.stop?.route?.id
             
             if (!cadeteRouteId) return;

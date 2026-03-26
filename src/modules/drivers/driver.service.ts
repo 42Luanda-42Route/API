@@ -1,8 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../infrastructure/database/prismaClient";
 import { AssignRouteDTO } from "./driver.interface";
 import bcrypt from "bcryptjs";
 import jwt  from "jsonwebtoken";
-const prisma = new PrismaClient();
 
 export const driverService = {
 

@@ -1,9 +1,8 @@
 import { Server } from "socket.io";
 import { FastifyInstance } from "fastify";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../infrastructure/database/prismaClient";
 import { log } from "console";
 
-const prisma = new PrismaClient();
 /*
 export function initChat(app: FastifyInstance){
     const io = new Server(app.server,{
