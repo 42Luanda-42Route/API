@@ -29,3 +29,10 @@ export type RouteWithRelations = Route & {
   stops: MiniBusStopSummary[]
   drivers: DriverSummary[]
 }
+
+export interface RouteLocationState {
+  source: "driver" | "cadete" | null
+  lastUpdate: number
+  sourceId: number
+  sourceName: string | null
+}

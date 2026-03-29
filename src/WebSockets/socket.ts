@@ -1,7 +1,7 @@
 import { Server } from "socket.io"
 import { FastifyInstance } from "fastify"
 import prisma from "../infrastructure/database/prismaClient";
-import { RouteLocationState } from "../modules/routes/route.interface";
+import { RouteLocationState } from "../domain/routes/Route";
 
 
 const routeLocationState: Record <number, RouteLocationState> = {};
