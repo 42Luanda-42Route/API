@@ -19,10 +19,13 @@ export default async function cadeteRoutes(app: FastifyInstance) {
     new GetCadeteRouteInfoUseCase(repo),
   )
 
+  // Public routes
   app.get("/cadetes", (req, reply) => controller.list(req, reply))
   app.get("/cadetes/:id", (req, reply) => controller.getById(req, reply))
-  app.post("/cadete", (req, reply) => controller.create(req, reply))
-  app.put("/cadetes/:id", (req, reply) => controller.update(req, reply))
-  app.delete("/cadetes/:id", (req, reply) => controller.delete(req, reply))
   app.get("/cadete/route/informations/:id", (req, reply) => controller.getRouteInfo(req, reply))
+
+  // Protected routes
+  app.post("/cadete", { preHandler: [app.authenticate] }, async (req, reply) => controller.create(req as any, reply))
+  app.put("/cadetes/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.update(req as any, reply))
+  app.delete("/cadetes/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.delete(req as any, reply))
 }

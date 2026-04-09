@@ -25,6 +25,14 @@ export function initSocket(app: FastifyInstance){
     const io = new Server(app.server, {
         cors:{
             origin: "*"
+        },
+        // Configuração para evitar timeouts
+        pingInterval: 10000,      // Enviar ping a cada 10 segundos
+        pingTimeout: 5000,       // Aguardar 5 segundos para pong antes de desconectar
+        transports: ["websocket", "polling"],
+        connectionStateRecovery: {
+            maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+            skipMiddlewares: true,
         }
     });
     (app.server as any).io = io;
@@ -32,6 +40,24 @@ export function initSocket(app: FastifyInstance){
 
     io.on("connection", (socket) =>{
         console.log("🟢 Socket conectado: ", socket.id);
+
+        socket.on('disconnect', (reason) => {
+            console.log(`🔴 Socket desconectado: ${socket.id}, motivo: ${reason}`);
+        });
+
+        socket.on("connect_error", (error) => {
+            console.error("❌ Erro de conexão:", error.message, error.cause);
+        });
+
+        socket.on("error", (error) => {
+            console.error("❌ Erro WebSocket:", error);
+        });
+
+        socket.on('ping', () => {
+            socket.emit('pong');
+        });
+
+        // });
 
 
         /**
@@ -41,13 +67,32 @@ export function initSocket(app: FastifyInstance){
             const driver = await prisma.drivers.findUnique({
                 where: {id: driverId}
             });
-            
+
             if (!driver?.current_route_id) return;
-            
+
             const room = `route_${driver.current_route_id}`;
             socket.join(room);
 
             console.log(`🚗 Driver ${driverId} entrou no room ${room}`);
+        });
+
+        /**
+         * Motorista sai do room da rota
+         */
+        socket.on("driver:leaveRoute", async({driverId}) =>{
+            const driver = await prisma.drivers.findUnique({
+                where: {id: driverId}
+            });
+
+            if (!driver?.current_route_id) return;
+
+            const room = `route_${driver.current_route_id}`;
+            socket.leave(room);
+
+            // Limpar estado da rota para permitir cadete fallback
+            delete routeLocationState[driver.current_route_id];
+
+            console.log(`🚗 Driver ${driverId} saiu do room ${room}`);
         });
 
 
@@ -269,8 +314,8 @@ export function initSocket(app: FastifyInstance){
 
 
         //Desconectar socket
-        socket.on("disconnect", () =>{
-            console.log("🔴 Socket disconnected: ",socket.id);
+        socket.on("disconnect", (reason) =>{
+            console.log("🔴 Socket disconnected: ", socket.id, " Motivo:", reason);
         });
 
     });

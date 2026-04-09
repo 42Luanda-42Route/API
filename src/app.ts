@@ -5,6 +5,7 @@ import swaggerUI from "@fastify/swagger-ui";
 import path from "path";
 import { readFileSync } from "fs";
 import prismaPlugin from "./plugins/prisma";
+import authPlugin from "./plugins/auth";
 import adminRoutes from "./interfaces/http/routes/admin.routes";
 import cadeteRoutes from "./interfaces/http/routes/cadete.routes";
 import driversRoutes from "./interfaces/http/routes/driver.routes";
@@ -74,11 +75,15 @@ export async function buildApp() {
   await app.register(prismaPlugin);
 
   initSocket(app);
-  
+
   app.register(fastifyJwt, {
     secret: process.env.JWT_SECRET as string,
     sign: { expiresIn: process.env.JWT_EXPIRES || "1h" },
   });
+
+  // Register auth plugin to provide `authenticate` hook
+  await app.register(authPlugin);
+
   app.register(authRoutes, { prefix: "/api"});
   app.register(routeRoutes, { prefix: "/api" });
   app.register(adminRoutes, { prefix: "/api" });

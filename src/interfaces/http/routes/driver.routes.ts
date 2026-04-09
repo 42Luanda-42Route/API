@@ -27,12 +27,15 @@ export default async function driverRoutes(app: FastifyInstance) {
     new LoginDriverUseCase(driverRepo),
   )
 
+  // Public routes
   app.get("/drivers", (req, reply) => controller.list(req, reply))
   app.get("/driver/:id", (req, reply) => controller.getById(req, reply))
-  app.post("/driver", (req, reply) => controller.create(req, reply))
-  app.put("/driver/:id", (req, reply) => controller.update(req, reply))
-  app.delete("/driver/:id", (req, reply) => controller.delete(req, reply))
-  app.put("/driver/location/socket/:id", (req, reply) => controller.updateLocationHandler(req, reply))
-  app.post("/driver/assign/route/:id", (req, reply) => controller.assignRouteHandler(req, reply))
-  app.delete("/driver/leave/route/:id", (req, reply) => controller.leaveRouteHandler(req, reply))
+
+  // Protected routes
+  app.post("/driver", { preHandler: [app.authenticate] }, async (req, reply) => controller.create(req as any, reply))
+  app.put("/driver/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.update(req as any, reply))
+  app.delete("/driver/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.delete(req as any, reply))
+  app.put("/driver/location/socket/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.updateLocationHandler(req as any, reply))
+  app.post("/driver/assign/route/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.assignRouteHandler(req as any, reply))
+  app.delete("/driver/leave/route/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.leaveRouteHandler(req as any, reply))
 }
