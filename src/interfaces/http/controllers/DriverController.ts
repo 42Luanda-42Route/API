@@ -71,19 +71,30 @@ export class DriverController {
   async updateLocationHandler(req: FastifyRequest<{ Params: { id: string }; Body: { lat: number; long: number } }>, reply: FastifyReply) {
     try {
       const driverId = Number(req.params.id)
+      
+      console.log(`\n✅ HANDLER HTTP: PUT /driver/location/socket/:id`);
+      console.log(`   Input: { driverId: ${driverId}, lat: ${req.body.lat}, long: ${req.body.long} }`);
+      
       const result = await this.updateLocation.execute({
         driverId,
         lat: req.body.lat,
         long: req.body.long,
       })
 
+      console.log(`   ✅ Localização salva no BD`);
+
       // Get driver info to find their assigned route for room-scoped broadcast
       const driver = await this.getDriverById.execute(driverId)
       const routeId = driver?.currentRouteId
       const io = (req.server as any).io
 
+      console.log(`   Driver: ${driver?.fullName || 'NÃO ENCONTRADO'}`);
+      console.log(`   Rota ID: ${routeId || 'NENHUMA'}`);
+      console.log(`   Socket.IO disponível: ${io ? 'SIM' : 'NÃO'}`);
+
       if (io && routeId) {
         // Broadcast to the specific route room (not all clients)
+        console.log(`   📡 Emitindo para sala: route_${routeId}`);
         io.to(`route_${routeId}`).emit("driver:location", {
           id_driver: driverId,
           lat: req.body.lat,
@@ -91,8 +102,10 @@ export class DriverController {
           routeId,
           driverName: driver?.fullName ?? driver?.username ?? null,
         })
+        console.log(`   ✅ Emitido com sucesso`);
       } else if (io) {
         // Fallback: if no route assigned, broadcast to all (backward compat)
+        console.log(`   📡 Sem rota específica, emitindo para ALL`);
         io.emit("driver:location", {
           id_driver: driverId,
           lat: req.body.lat,
@@ -100,10 +113,14 @@ export class DriverController {
           routeId: null,
           driverName: driver?.fullName ?? driver?.username ?? null,
         })
+        console.log(`   ✅ Emitido com sucesso`);
+      } else {
+        console.log(`   ⚠️ Nenhum cliente WebSocket conectado`);
       }
 
       return reply.send(result)
     } catch (error) {
+      console.error(`   ❌ Erro:`, error);
       return this.handle(error, reply)
     }
   }

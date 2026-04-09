@@ -12,7 +12,6 @@ import driversRoutes from "./interfaces/http/routes/driver.routes";
 import authRoutes from "./interfaces/http/routes/auth.routes";
 import minibusstopsRoutes from "./interfaces/http/routes/miniBusStops.routes";
 import routeRoutes from "./interfaces/http/routes/route.routes";
-import { initSocket } from "./WebSockets/socket";
 import fastifyJwt from "@fastify/jwt";
 import "dotenv/config";
 
@@ -73,8 +72,6 @@ export async function buildApp() {
   });
 
   await app.register(prismaPlugin);
-
-  initSocket(app);
 
   app.register(fastifyJwt, {
     secret: process.env.JWT_SECRET as string,
