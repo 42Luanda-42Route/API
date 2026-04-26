@@ -161,30 +161,43 @@ export function initSocket(app: FastifyInstance){
 
             console.log(`   ✅ Driver ${driverId} saiu do room ${room}`);
         });
+        /**
+         * Set Current Stop
+         * 1. Saves to DB route
+         * 2. Broadcasts to cadetes in room
+         */
+        socket.on("driver:setCurrentStop", async (data: { driverId: number; stopId: number }) => {
+            try {
+                const { driverId, stopId } = data;
+                const cached = driverRouteCache.get(driverId);
 
+                if (!cached) {
+                    console.log(`[Socket] ⚠️ setCurrentStop: Motorista ${driverId} sem rota ativa.`);
+                    return;
+                }
 
+                const room = `route_${cached.routeId}`; // match the room format
 
+                // Update DB fire-and-forget
+                prisma.route.update({
+                    where: { id: cached.routeId },
+                    data: { current_stop_id: stopId }
+                }).catch(err => console.log(`[Socket] Failed to update current_stop_id for route ${cached.routeId}:`, err?.message ?? err));
 
+                // Broadcast to cadetes
+                socket.to(room).emit("route:currentStop", {
+                    routeId: cached.routeId,
+                    stopId: stopId,
+                    driverId: driverId,
+                    timestamp: Date.now()
+                });
 
+                console.log(`[Socket] 📍 Motorista ${driverId} (Rota ${cached.routeId}) marcou paragem ${stopId}`);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            } catch (error: any) {
+                console.log(`[Socket] Erro setCurrentStop:`, error?.message ?? error);
+            }
+        });
         /**
          * Cadete entra no room da rota
          */

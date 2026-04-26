@@ -2,6 +2,7 @@ export interface Route {
   id: number
   routeName: string
   description?: string | null
+  currentStopId?: number | null
   createdAt: Date
 }
 
@@ -25,9 +26,22 @@ export interface MiniBusStopSummary {
   routeId: number
 }
 
+export interface ScheduleSummary {
+  id: number
+  routeId: number
+  departureTime: string
+  arrivalTime: string
+  durationMin: number
+  dayType: string
+  shift: string
+  isActive: boolean
+}
+
 export type RouteWithRelations = Route & {
   stops: MiniBusStopSummary[]
   drivers: DriverSummary[]
+  currentStop: MiniBusStopSummary | null
+  schedules: ScheduleSummary[]
 }
 
 export interface RouteLocationState {
@@ -36,3 +50,4 @@ export interface RouteLocationState {
   sourceId: number
   sourceName: string | null
 }
+

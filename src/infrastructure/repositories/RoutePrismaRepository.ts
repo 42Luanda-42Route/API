@@ -1,6 +1,6 @@
-import { Drivers, MiniBusStop, Route as PrismaRoute, PrismaClient } from "@prisma/client"
+import { Drivers, MiniBusStop, Route as PrismaRoute, Schedule as PrismaSchedule, PrismaClient } from "@prisma/client"
 import { RouteRepository } from "../../domain/routes/RouteRepository"
-import { DriverSummary, MiniBusStopSummary, Route, RouteWithRelations } from "../../domain/routes/Route"
+import { DriverSummary, MiniBusStopSummary, ScheduleSummary, Route, RouteWithRelations } from "../../domain/routes/Route"
 
 export class RoutePrismaRepository implements RouteRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -29,6 +29,8 @@ export class RoutePrismaRepository implements RouteRepository {
     const routes = await this.prisma.route.findMany({
       include: {
         stops: true,
+        current_stop: true,
+        schedules: true,
         drivers: {
           select: {
             id: true,
@@ -52,6 +54,8 @@ export class RoutePrismaRepository implements RouteRepository {
       where: { id },
       include: {
         stops: true,
+        current_stop: true,
+        schedules: true,
         drivers: {
           select: {
             id: true,
@@ -74,6 +78,7 @@ export class RoutePrismaRepository implements RouteRepository {
       id: route.id,
       routeName: route.route_name,
       description: route.description ?? null,
+      currentStopId: route.current_stop_id ?? null,
       createdAt: route.createdAt,
     }
   }
@@ -102,10 +107,32 @@ export class RoutePrismaRepository implements RouteRepository {
     }
   }
 
-  private mapRouteWithRelations(route: PrismaRoute & { stops: MiniBusStop[]; drivers: Array<Pick<Drivers, "id" | "full_name" | "username" | "email" | "phone" | "photo" | "current_route_id">> }): RouteWithRelations {
+  private mapSchedule(schedule: PrismaSchedule): ScheduleSummary {
+    return {
+      id: schedule.id,
+      routeId: schedule.route_id,
+      departureTime: schedule.departure_time,
+      arrivalTime: schedule.arrival_time,
+      durationMin: schedule.duration_min,
+      dayType: schedule.day_type,
+      shift: schedule.shift,
+      isActive: schedule.is_active,
+    }
+  }
+
+  private mapRouteWithRelations(
+    route: PrismaRoute & {
+      stops: MiniBusStop[];
+      current_stop: MiniBusStop | null;
+      schedules: PrismaSchedule[];
+      drivers: Array<Pick<Drivers, "id" | "full_name" | "username" | "email" | "phone" | "photo" | "current_route_id">>
+    }
+  ): RouteWithRelations {
     return {
       ...this.mapRoute(route),
       stops: route.stops.map((stop) => this.mapStop(stop)),
+      currentStop: route.current_stop ? this.mapStop(route.current_stop) : null,
+      schedules: route.schedules.map((s) => this.mapSchedule(s)),
       drivers: route.drivers.map((driver) => this.mapDriver(driver)),
     }
   }

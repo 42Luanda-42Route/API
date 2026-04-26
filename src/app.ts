@@ -12,6 +12,7 @@ import driversRoutes from "./interfaces/http/routes/driver.routes";
 import authRoutes from "./interfaces/http/routes/auth.routes";
 import minibusstopsRoutes from "./interfaces/http/routes/miniBusStops.routes";
 import routeRoutes from "./interfaces/http/routes/route.routes";
+import scheduleRoutes from "./interfaces/http/routes/schedule.routes";
 import fastifyJwt from "@fastify/jwt";
 import "dotenv/config";
 
@@ -87,6 +88,7 @@ export async function buildApp() {
   app.register(cadeteRoutes, { prefix: "/api" });
   app.register(driversRoutes, { prefix: "/api" });
   app.register(minibusstopsRoutes, { prefix: "/api" });
+  app.register(scheduleRoutes, { prefix: "/api" });
 
   return app;
 }

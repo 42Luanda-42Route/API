@@ -24,9 +24,12 @@ function generateLuandaCoordinates() {
 async function cleanDatabase() {
   await prisma.message.deleteMany();
   await prisma.chat.deleteMany();
+  await prisma.schedule.deleteMany();
   await prisma.driverCoordinates.deleteMany();
   await prisma.cadetes.deleteMany();
   await prisma.drivers.deleteMany();
+  // Clear current_stop_id before deleting stops
+  await prisma.route.updateMany({ data: { current_stop_id: null } });
   await prisma.miniBusStop.deleteMany();
   await prisma.route.deleteMany();
   await prisma.admins.deleteMany();
@@ -236,6 +239,39 @@ async function seedChatsAndMessages(
   }
 }
 
+// ─── Schedule Seeds ────────────────────────────────────────────────────────
+
+const SCHEDULE_SEEDS = [
+  // Mutamba - Cazenga
+  { routeIndex: 0, departure_time: "06:00", arrival_time: "06:45", duration_min: 45, shift: "morning" },
+  { routeIndex: 0, departure_time: "11:00", arrival_time: "11:40", duration_min: 40, shift: "afternoon" },
+  // Ingombota - Viana
+  { routeIndex: 1, departure_time: "06:15", arrival_time: "07:00", duration_min: 45, shift: "morning" },
+  { routeIndex: 1, departure_time: "11:15", arrival_time: "12:00", duration_min: 45, shift: "afternoon" },
+  // Maianga - Benfica
+  { routeIndex: 2, departure_time: "06:00", arrival_time: "06:30", duration_min: 30, shift: "morning" },
+  { routeIndex: 2, departure_time: "11:00", arrival_time: "11:30", duration_min: 30, shift: "afternoon" },
+  // Kilamba - Largo
+  { routeIndex: 3, departure_time: "06:30", arrival_time: "07:15", duration_min: 45, shift: "morning" },
+  { routeIndex: 3, departure_time: "11:30", arrival_time: "12:15", duration_min: 45, shift: "afternoon" },
+];
+
+async function seedSchedules(routes: Array<{ id: number; route_name: string }>) {
+  const scheduleData = SCHEDULE_SEEDS.map((s) => ({
+    route_id: routes[s.routeIndex].id,
+    departure_time: s.departure_time,
+    arrival_time: s.arrival_time,
+    duration_min: s.duration_min,
+    day_type: "WEEKDAY" as const,
+    shift: s.shift,
+    is_active: true,
+  }));
+
+  await prisma.schedule.createMany({ data: scheduleData });
+  const count = await prisma.schedule.count();
+  return count;
+}
+
 async function main() {
   console.log("🌱 Seeding database...");
   faker.seed(42042);
@@ -254,12 +290,15 @@ async function main() {
   const cadetes = await seedCadetes(stops);
   await seedChatsAndMessages(routes, drivers, cadetes);
 
+  const scheduleCount = await seedSchedules(routes);
+
   console.log("✅ Seed concluido com sucesso!");
   console.log(`Admins: 2`);
   console.log(`Routes: ${routes.length}`);
   console.log(`Stops: ${stops.length}`);
   console.log(`Drivers: ${drivers.length}`);
   console.log(`Cadetes: ${cadetes.length}`);
+  console.log(`Schedules: ${scheduleCount}`);
 }
 
 main()
@@ -270,3 +309,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

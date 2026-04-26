@@ -65,20 +65,48 @@ model MiniBusStop {
   createdAt   DateTime @default(now())
 
   cadetes Cadetes[]
-  route   Route     @relation(fields: [route_id], references: [id])
+  route   Route     @relation("RouteStops", fields: [route_id], references: [id])
+
+  // Routes where this stop is the current_stop
+  currentStopRoutes Route[] @relation("CurrentStop")
 }
 
 model Route {
-  id          Int      @id @default(autoincrement())
-  route_name  String
-  description String?
-  createdAt   DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  route_name      String
+  description     String?
+  current_stop_id Int?
+  createdAt       DateTime @default(now())
 
   //Liga várias paragens
-  stops MiniBusStop[]
+  stops MiniBusStop[] @relation("RouteStops")
+
+  // Paragem actual onde o motorista se encontra
+  current_stop MiniBusStop? @relation("CurrentStop", fields: [current_stop_id], references: [id])
 
   //Motoristas podem estar temporariamente nesta rota
-  drivers Drivers[]
+  drivers   Drivers[]
+  schedules Schedule[]
+}
+
+model Schedule {
+  id             Int      @id @default(autoincrement())
+  route_id       Int
+  departure_time String   // e.g. "06:00"
+  arrival_time   String   // e.g. "06:45"
+  duration_min   Int      // e.g. 45
+  day_type       DayType  @default(WEEKDAY)
+  shift          String   // "morning" | "afternoon"
+  is_active      Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  route Route @relation(fields: [route_id], references: [id])
+}
+
+enum DayType {
+  WEEKDAY
+  SATURDAY
+  SUNDAY
 }
 
 model Message {
@@ -123,3 +151,4 @@ model DriverCoordinates {
   createdAt DateTime @default(now())
   driver    Drivers  @relation(fields: [id_driver], references: [id])
 }
+
