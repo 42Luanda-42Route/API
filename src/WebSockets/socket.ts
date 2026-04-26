@@ -8,6 +8,9 @@ const routeLocationState: Record <number, RouteLocationState> = {};
 
 const DRIVER_TIMEOUT = 10_000; //10 segundos  
 
+// FUNC-04: In-memory cache to avoid DB query on every location update
+const driverRouteCache = new Map<number, { routeId: number; fullName: string | null }>();
+
 function isDriveActive(routeId: number){
     
     const state = routeLocationState[routeId];
@@ -113,6 +116,12 @@ export function initSocket(app: FastifyInstance){
                 return;
             }
 
+            // FUNC-04: Cache route info in memory
+            driverRouteCache.set(driverId, {
+                routeId: driver.current_route_id,
+                fullName: driver.full_name,
+            });
+
             const room = `route_${driver.current_route_id}`;
             socket.join(room);
 
@@ -126,23 +135,29 @@ export function initSocket(app: FastifyInstance){
             console.log(`\n✅ HANDLER: driver:leaveRoute`);
             console.log(`   Input: { driverId: ${driverId} }`);
             
-            const driver = await prisma.drivers.findUnique({
-                where: {id: driverId}
-            });
+            // FUNC-04: Try cache first, fallback to DB
+            const cached = driverRouteCache.get(driverId);
+            let routeId = cached?.routeId;
 
-            console.log(`   Driver encontrado:`, driver ? `${driver.full_name}` : 'NÃO ENCONTRADO');
-            console.log(`   Rota atual: ${driver?.current_route_id || 'NENHUMA'}`);
+            if (!routeId) {
+                const driver = await prisma.drivers.findUnique({
+                    where: {id: driverId}
+                });
+                routeId = driver?.current_route_id ?? undefined;
+            }
 
-            if (!driver?.current_route_id) {
+            if (!routeId) {
                 console.log(`   ⚠️ Driver sem rota, retornando`);
                 return;
             }
 
-            const room = `route_${driver.current_route_id}`;
+            const room = `route_${routeId}`;
             socket.leave(room);
 
             // Limpar estado da rota para permitir cadete fallback
-            delete routeLocationState[driver.current_route_id];
+            delete routeLocationState[routeId];
+            // FUNC-04: Clear cache
+            driverRouteCache.delete(driverId);
 
             console.log(`   ✅ Driver ${driverId} saiu do room ${room}`);
         });
@@ -248,9 +263,6 @@ export function initSocket(app: FastifyInstance){
          * - Broadcast para cadetes da rota
          */
         socket.on("driver:updateLocation", async(data) =>{
-            console.log(`\n✅ HANDLER: driver:updateLocation`);
-            console.log(`   Input Data:`, JSON.stringify(data, null, 2));
-            
             const {id_driver, lat, long} = data;
 
             // ─── Validação: Campos obrigatórios ────────────────────────────
@@ -263,69 +275,73 @@ export function initSocket(app: FastifyInstance){
                 return;
             }
 
-            // ─── Buscar driver do BD ───────────────────────────────────────
-            const driver = await prisma.drivers.findUnique({ 
-                where: { id: id_driver }
-            });
-            
-            if (!driver) {
-                console.error(`   ❌ Driver não encontrado: id=${id_driver}`);
-                socket.emit("socket:error", {
-                    event: "driver:updateLocation",
-                    message: `Driver with id ${id_driver} not found.`
+            // FUNC-04: Use in-memory cache first, fallback to DB
+            let cached = driverRouteCache.get(id_driver);
+            if (!cached) {
+                const driver = await prisma.drivers.findUnique({ 
+                    where: { id: id_driver }
                 });
-                return;
+                if (!driver) {
+                    console.error(`   ❌ Driver não encontrado: id=${id_driver}`);
+                    socket.emit("socket:error", {
+                        event: "driver:updateLocation",
+                        message: `Driver with id ${id_driver} not found.`
+                    });
+                    return;
+                }
+                if (!driver.current_route_id) {
+                    console.warn(`   ⚠️ Driver ${driver.full_name} não tem rota atribuída`);
+                    socket.emit("socket:error", {
+                        event: "driver:updateLocation",
+                        message: "Driver is not assigned to any route."
+                    });
+                    return;
+                }
+                // Populate cache for next time
+                cached = { routeId: driver.current_route_id, fullName: driver.full_name };
+                driverRouteCache.set(id_driver, cached);
             }
 
-            // ─── Validação: Driver tem rota atribuída ─────────────────────
-            if (!driver.current_route_id) {
-                console.warn(`   ⚠️ Driver ${driver.full_name} não tem rota atribuída`);
-                socket.emit("socket:error", {
-                    event: "driver:updateLocation",
-                    message: "Driver is not assigned to any route."
-                });
-                return;
-            }
+            const routeId = cached.routeId;
 
             // ─── Atualizar estado global da rota ───────────────────────────
-            const routeId = driver.current_route_id;
             routeLocationState[routeId] = {
                 source: "driver",
-                sourceId: driver.id,
+                sourceId: id_driver,
                 lastUpdate: Date.now(),
-                sourceName: driver.full_name
+                sourceName: cached.fullName
             };
-            console.log(`   ✅ Estado da rota ${routeId} atualizado (motorista ativo)`);
 
-            // ─── Salvar coordenadas no BD ──────────────────────────────────
-            try {
-                await prisma.driverCoordinates.upsert({
-                    where: { id_driver },
-                    update: { lat, long },
-                    create: { id_driver, lat, long }
-                });
-                console.log(`   ✅ Coordenadas salvas: (${lat}, ${long})`);
-            } catch (err) {
+            // ─── Salvar coordenadas no BD (fire-and-forget, não bloqueia broadcast) ──
+            prisma.driverCoordinates.upsert({
+                where: { id_driver },
+                update: { lat, long },
+                create: { id_driver, lat, long }
+            }).catch(err => {
                 console.error(`   ❌ Erro ao salvar coordenadas:`, err);
-                socket.emit("socket:error", {
-                    event: "driver:updateLocation",
-                    message: "Failed to save coordinates."
-                });
-                return;
-            }
+            });
 
-            // ─── Broadcast para cadetes da rota ───────────────────────────
+            // BUG-03 FIX: Use socket.to() instead of io.to() to exclude sender
             const room = `route_${routeId}`;
-            console.log(`   📡 Emitindo para ${room}`);
-
-            io.to(room).emit("driver:location", {
+            socket.to(room).emit("driver:location", {
                 id_driver,
                 lat,
                 long,
                 routeId,
-                driverName: driver.full_name
+                driverName: cached.fullName
             });
-            console.log(`   ✅ Localização do motorista emitida para ${room}`);
+
+            // Send broadcast ACK back to driver with listener count
+            try {
+                const socketsInRoom = await io.in(room).fetchSockets();
+                socket.emit('driver:broadcast-ack', {
+                    routeId,
+                    listenersCount: Math.max(0, socketsInRoom.length - 1), // Exclude the driver
+                    timestamp: Date.now(),
+                });
+            } catch (_) {
+                // Non-critical, ignore errors
+            }
         });
 
 
@@ -416,7 +432,8 @@ export function initSocket(app: FastifyInstance){
             const room = `route_${routeId}`;
             console.log(`   📡 Emitindo para ${room}`);
 
-            io.to(room).emit("transport:location", {
+            // BUG-03 FIX: Use socket.to() to exclude sender from broadcast
+            socket.to(room).emit("transport:location", {
                 cadeteId,
                 lat,
                 long,
@@ -446,12 +463,22 @@ export function initSocket(app: FastifyInstance){
 
 
 
-
-
-        //Desconectar socket
-        socket.on("disconnect", (reason) =>{
-            console.log("🔴 Socket disconnected: ", socket.id, " Motivo:", reason);
-        });
+        // BUG-04 FIX: Removed duplicate disconnect handler (already at line 74)
 
     });
+
+    // FUNC-03: Periodic check for driver offline → notify cadetes
+    setInterval(() => {
+        for (const [routeIdStr, state] of Object.entries(routeLocationState)) {
+            const routeId = Number(routeIdStr);
+            if (
+                state.source === 'driver' &&
+                Date.now() - state.lastUpdate > DRIVER_TIMEOUT
+            ) {
+                console.log(`[OfflineCheck] 🔴 Motorista offline na rota ${routeId} (sem update há ${DRIVER_TIMEOUT / 1000}s)`);
+                io.to(`route_${routeId}`).emit('driver:offline', { routeId });
+                delete routeLocationState[routeId];
+            }
+        }
+    }, DRIVER_TIMEOUT);
 }
