@@ -1,4 +1,4 @@
-import { FastifyInstance } from "fastify"
+import { FastifyInstance, FastifyRequest } from "fastify"
 import { CadetePrismaRepository } from "../../../infrastructure/repositories/CadetePrismaRepository"
 import { CadeteController } from "../controllers/CadeteController"
 import { ListCadetesUseCase } from "../../../application/cadetes/useCases/ListCadetes"
@@ -21,8 +21,8 @@ export default async function cadeteRoutes(app: FastifyInstance) {
 
   // Public routes
   app.get("/cadetes", (req, reply) => controller.list(req, reply))
-  app.get("/cadetes/:id", (req, reply) => controller.getById(req, reply))
-  app.get("/cadete/route/informations/:id", (req, reply) => controller.getRouteInfo(req, reply))
+  app.get("/cadetes/:id", async (req, reply) => controller.getById(req as FastifyRequest<{ Params: { id: string } }>, reply))
+  app.get("/cadete/route/informations/:id", async (req, reply) => controller.getRouteInfo(req as FastifyRequest<{ Params: { id: string } }>, reply))
 
   // Protected routes
   app.post("/cadete", { preHandler: [app.authenticate] }, async (req, reply) => controller.create(req as any, reply))

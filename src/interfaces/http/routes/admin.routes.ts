@@ -1,4 +1,4 @@
-import { FastifyInstance } from "fastify"
+import { FastifyInstance, FastifyRequest } from "fastify"
 import { AdminPrismaRepository } from "../../../infrastructure/repositories/AdminPrismaRepository"
 import { AdminController } from "../controllers/AdminController"
 import { CreateAdminUseCase } from "../../../application/admins/useCases/CreateAdmin"
@@ -21,7 +21,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // Public routes
   app.get("/admins", (req, reply) => controller.list(req, reply))
-  app.get("/admins/:id", (req, reply) => controller.getById(req, reply))
+  app.get("/admins/:id", async (req, reply) => controller.getById(req as FastifyRequest<{ Params: { id: string } }>, reply))
 
   // Protected routes
   app.post("/admin", { preHandler: [app.authenticate] }, async (req, reply) => controller.create(req as any, reply))

@@ -1,4 +1,4 @@
-import { FastifyInstance } from "fastify"
+import { FastifyInstance, FastifyRequest } from "fastify"
 import { DriverPrismaRepository } from "../../../infrastructure/repositories/DriverPrismaRepository"
 import { RoutePrismaRepository } from "../../../infrastructure/repositories/RoutePrismaRepository"
 import { DriverController } from "../controllers/DriverController"
@@ -29,7 +29,7 @@ export default async function driverRoutes(app: FastifyInstance) {
 
   // Public routes
   app.get("/drivers", (req, reply) => controller.list(req, reply))
-  app.get("/driver/:id", (req, reply) => controller.getById(req, reply))
+  app.get("/driver/:id", async (req, reply) => controller.getById(req as FastifyRequest<{ Params: { id: string } }>, reply))
 
   // Protected routes
   app.post("/driver", { preHandler: [app.authenticate] }, async (req, reply) => controller.create(req as any, reply))

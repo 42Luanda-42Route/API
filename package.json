@@ -6,7 +6,8 @@
   "scripts": {
     "build": "prisma generate && tsc",
     "generate:schema": "npx prisma generate",
-    "dev": "ts-node-dev --respawn --transpile-only src/main.ts"
+    "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+    "start:prod": "npx prisma migrate deploy && node dist/main.js"
   },
   "repository": {
     "type": "git",

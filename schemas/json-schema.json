@@ -211,6 +211,12 @@
         },
         "route": {
           "$ref": "#/definitions/Route"
+        },
+        "currentStopRoutes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Route"
+          }
         }
       }
     },
@@ -239,11 +245,67 @@
             "$ref": "#/definitions/MiniBusStop"
           }
         },
+        "current_stop": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/MiniBusStop"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "drivers": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/Drivers"
           }
+        },
+        "schedules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Schedule"
+          }
+        }
+      }
+    },
+    "Schedule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "departure_time": {
+          "type": "string"
+        },
+        "arrival_time": {
+          "type": "string"
+        },
+        "duration_min": {
+          "type": "integer"
+        },
+        "day_type": {
+          "type": "string",
+          "default": "WEEKDAY",
+          "enum": [
+            "WEEKDAY",
+            "SATURDAY",
+            "SUNDAY"
+          ]
+        },
+        "shift": {
+          "type": "string"
+        },
+        "is_active": {
+          "type": "boolean",
+          "default": true
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "route": {
+          "$ref": "#/definitions/Route"
         }
       }
     },
@@ -346,6 +408,9 @@
     },
     "route": {
       "$ref": "#/definitions/Route"
+    },
+    "schedule": {
+      "$ref": "#/definitions/Schedule"
     },
     "message": {
       "$ref": "#/definitions/Message"
