@@ -27,10 +27,18 @@ export class AuthController {
 
   async callback42(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { code, state } = request.query as { code: string; state: string }
-      const { token } = await this.handle42Callback.execute(code)
-      const redirectUrl = state
-      return reply.redirect(`${redirectUrl}?token=${token}`)
+      const { code, state, redirect } = request.query as { code: string; state?: string; redirect?: string }
+      const result = await this.handle42Callback.execute(code)
+      const targetUrl = state || redirect
+
+      if (targetUrl) {
+        const separator = targetUrl.includes("?") ? "&" : "?"
+        return reply.redirect(
+          `${targetUrl}${separator}token=${result.token}&isDBUser=${result.isDBUser}&needsOnboarding=${result.needsOnboarding}&hasStop=${result.hasStop}&hasDistrict=${result.hasDistrict}`,
+        )
+      }
+
+      return reply.send(result)
     } catch (error) {
       return this.handle(error, reply)
     }

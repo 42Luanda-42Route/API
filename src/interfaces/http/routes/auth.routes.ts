@@ -54,7 +54,7 @@ export default async function authRoutes(app: FastifyInstance) {
       schema: {
         tags: ["Auth"],
         summary: "Callback da autenticação 42 Intra",
-        description: "Recebe o authorization code do 42 Intra, obtém o perfil do utilizador e emite um token JWT com permissões de CADETE.",
+        description: "Recebe o authorization code do 42 Intra, obtém o perfil do cadete, auto-cadastra se for novo, e retorna o JWT com sinalizadores de onboarding (needsOnboarding, hasDistrict, hasStop).",
         querystring: {
           type: "object",
           required: ["code"],
@@ -64,14 +64,39 @@ export default async function authRoutes(app: FastifyInstance) {
               description: "Código de autorização retornado pela API da 42 Intra",
               example: "0a1b2c3d4e5f6g7h8i9j",
             },
+            state: {
+              type: "string",
+              description: "URL de redirecionamento frontend opcional",
+              example: "http://localhost:3000/callback",
+            },
+            redirect: {
+              type: "string",
+              description: "URL de redirecionamento frontend opcional",
+              example: "http://localhost:3000/callback",
+            },
           },
         },
         response: {
           200: {
-            description: "Autenticação bem-sucedida, retorna token JWT",
+            description: "Autenticação bem-sucedida, retorna token JWT e status de onboarding",
             type: "object",
             properties: {
               token: { type: "string", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+              isDBUser: { type: "boolean", example: false, description: "True se o cadete já estiver registado no banco de dados local" },
+              needsOnboarding: { type: "boolean", example: true, description: "True se o cadete for novo ou não tiver paragem definida" },
+              hasDistrict: { type: "boolean", example: false, description: "True se já tiver distrito associado" },
+              hasStop: { type: "boolean", example: false, description: "True se já tiver paragem associada" },
+              cadete: {
+                type: "object",
+                properties: {
+                  id: { type: "integer", example: 1 },
+                  fullName: { type: "string", nullable: true, example: "Cadete Silva" },
+                  username: { type: "string", nullable: true, example: "csilva" },
+                  email: { type: "string", nullable: true, example: "csilva@student.42luanda.com" },
+                  district: { type: "string", nullable: true, example: null },
+                  stopId: { type: "integer", nullable: true, example: null },
+                },
+              },
             },
           },
           422: {
