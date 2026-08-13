@@ -27,8 +27,8 @@ model Cadetes {
   username     String?      @unique
   email        String?      @unique
   city         String?
-  district     String?
-  priorityList Boolean      @default(false)
+  district     String?      @map("distrit")
+  priorityList Boolean      @default(false) @map("prioritityList")
   phone        Int?
   stop_id      Int?
   stop         MiniBusStop? @relation(fields: [stop_id], references: [id], onDelete: SetNull)
@@ -40,7 +40,7 @@ model Drivers {
   full_name   String?
   username    String?             @unique
   email       String?             @unique
-  password    String?
+  password    String?             @map("passwrd")
   photo       String?
   phone       Int?
   coordinates DriverCoordinates[]
@@ -57,7 +57,7 @@ model Drivers {
 model MiniBusStop {
   id          Int      @id @default(autoincrement())
   stop_name   String?  @unique
-  district    String?
+  district    String?  @map("distrit")
   latitude    Float?
   longitude   Float?
   description String?
