@@ -29,7 +29,12 @@ export class AuthController {
     try {
       const { code, state, redirect } = request.query as { code: string; state?: string; redirect?: string }
       const result = await this.handle42Callback.execute(code)
-      const targetUrl = state || redirect
+      const targetUrl =
+        state && state !== "undefined" && state.trim() !== ""
+          ? state
+          : redirect && redirect !== "undefined" && redirect.trim() !== ""
+            ? redirect
+            : undefined
 
       if (targetUrl) {
         const separator = targetUrl.includes("?") ? "&" : "?"
