@@ -45,6 +45,14 @@ Todas as fases do plano de implementação ([implementation_plan.md](file:///c:/
 - **Testes de Integração:** `PrismaErrorHandler` e repositórios Prisma.
 - **Testes E2E:** Endpoints Fastify via `app.inject()`.
 
+### Fase 7 — Documentação Swagger / OpenAPI com Segurança e Proteção por Senha
+- **Proteção de Acesso à Documentação (HTTP Basic Auth):**
+  - O endpoint `/api/docs` e todos os seus recursos (`/api/docs/*`, `/api/docs/json`, etc.) foram protegidos por autenticação **HTTP Basic Auth**.
+  - Credenciais configuráveis através das variáveis de ambiente `SWAGGER_USER` e `SWAGGER_PASSWORD` (padrão: `admin` / `admin42`).
+  - Ao tentar aceder a `/api/docs`, o navegador apresenta um prompt nativo solicitando utilizador e senha. Apenas com as credenciais corretas a documentação é desbloqueada.
+- **Segurança Global nos Endpoints (Bearer JWT):** Configurado esquema `bearerAuth` (HTTP Bearer JWT) no Swagger para testar chamadas protegidas através do botão **Authorize**.
+- **Esquemas Detalhados:** Documentação completa de todas as rotas (Auth, Admins, Cadetes, Drivers, MiniBusStops, Routes, Health) com parâmetros, corpos de requisição e respostas HTTP.
+
 ---
 
 ## 2. Resultados dos Testes
@@ -55,9 +63,9 @@ npm run test
 
 ```
 Test Suites: 11 passed, 11 total
-Tests:       77 passed, 77 total
+Tests:       80 passed, 80 total
 Snapshots:   0 total
-Time:        31.973 s
+Time:        27.121 s
 ```
 
 - `npx tsc --noEmit` executado sem erros (0 erros TypeScript).

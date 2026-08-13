@@ -51,12 +51,50 @@ describe("E2E API Endpoints Test", () => {
     })
   })
 
+  describe("Swagger Documentation Basic Auth Protection", () => {
+    it("GET /api/docs should return 401 without Basic Auth", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/docs",
+      })
+
+      expect(response.statusCode).toBe(401)
+      expect(response.headers["www-authenticate"]).toContain("Basic")
+    })
+
+    it("GET /api/docs should return 401 with invalid credentials", async () => {
+      const invalidAuth = Buffer.from("wrong:wrong").toString("base64")
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/docs",
+        headers: {
+          authorization: `Basic ${invalidAuth}`,
+        },
+      })
+
+      expect(response.statusCode).toBe(401)
+    })
+
+    it("GET /api/docs should allow access with valid Basic Auth", async () => {
+      const validAuth = Buffer.from("admin:admin42").toString("base64")
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/docs",
+        headers: {
+          authorization: `Basic ${validAuth}`,
+        },
+      })
+
+      expect([200, 302]).toContain(response.statusCode)
+    })
+  })
+
   describe("Protected Routes Authentication Check", () => {
     it("POST /api/admins should return 401 without token", async () => {
       const response = await app.inject({
         method: "POST",
         url: "/api/admins",
-        payload: { username: "test" },
+        payload: { username: "test", password: "password123" },
       })
       expect(response.statusCode).toBe(401)
     })
@@ -74,7 +112,7 @@ describe("E2E API Endpoints Test", () => {
       const response = await app.inject({
         method: "POST",
         url: "/api/drivers",
-        payload: { username: "test" },
+        payload: { username: "test", password: "password123" },
       })
       expect(response.statusCode).toBe(401)
     })
@@ -83,7 +121,7 @@ describe("E2E API Endpoints Test", () => {
       const response = await app.inject({
         method: "POST",
         url: "/api/minibusstops",
-        payload: { stop_name: "test" },
+        payload: { stop_name: "test", route_id: 1 },
       })
       expect(response.statusCode).toBe(401)
     })

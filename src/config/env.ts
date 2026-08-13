@@ -20,4 +20,6 @@ export const env = {
   CORS_ORIGINS: process.env.CORS_ORIGINS || "*",
   NODE_ENV: process.env.NODE_ENV || "development",
   PORT: parseInt(process.env.PORT || "3000", 10),
+  SWAGGER_USER: process.env.SWAGGER_USER || "admin",
+  SWAGGER_PASSWORD: process.env.SWAGGER_PASSWORD || "admin42",
 } as const
