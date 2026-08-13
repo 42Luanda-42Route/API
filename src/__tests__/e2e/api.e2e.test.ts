@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify"
 import { buildApp } from "../../app"
 import { generateToken } from "../../utils/jwt"
+import { env } from "../../config/env"
 
 describe("E2E API Endpoints Test", () => {
   let app: FastifyInstance
@@ -76,7 +77,7 @@ describe("E2E API Endpoints Test", () => {
     })
 
     it("GET /api/docs should allow access with valid Basic Auth", async () => {
-      const validAuth = Buffer.from("admin:admin42").toString("base64")
+      const validAuth = Buffer.from(`${env.SWAGGER_USER}:${env.SWAGGER_PASSWORD}`).toString("base64")
       const response = await app.inject({
         method: "GET",
         url: "/api/docs",
