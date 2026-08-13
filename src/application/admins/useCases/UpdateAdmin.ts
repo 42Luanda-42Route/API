@@ -26,9 +26,9 @@ export class UpdateAdminUseCase {
     }
 
     return this.repo.update(id, {
-      fullName: input.full_name ?? existing.fullName,
-      username: input.username ?? existing.username,
-      email: input.email ?? existing.email,
+      fullName: input.full_name !== undefined ? input.full_name : existing.fullName,
+      username: input.username !== undefined ? input.username : existing.username,
+      email: input.email !== undefined ? input.email : existing.email,
       password: password ?? existing.password,
     })
   }

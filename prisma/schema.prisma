@@ -22,18 +22,17 @@ model Admins {
 }
 
 model Cadetes {
-  id             Int          @id @default(autoincrement())
-  full_name      String?
-  username       String?      @unique
-  email          String?      @unique
-  city           String?
-  distrit        String?
-  prioritityList Boolean      @default(false)
-  phone          Int?
-  stop_id        Int?
-  stop           MiniBusStop? @relation(fields: [stop_id], references: [id])
-  //messages  Message[]    @relation("CadeteMessages")
-  createdAt      DateTime     @default(now())
+  id           Int          @id @default(autoincrement())
+  full_name    String?
+  username     String?      @unique
+  email        String?      @unique
+  city         String?
+  district     String?
+  priorityList Boolean      @default(false)
+  phone        Int?
+  stop_id      Int?
+  stop         MiniBusStop? @relation(fields: [stop_id], references: [id], onDelete: SetNull)
+  createdAt    DateTime     @default(now())
 }
 
 model Drivers {
@@ -41,23 +40,24 @@ model Drivers {
   full_name   String?
   username    String?             @unique
   email       String?             @unique
-  passwrd     String?
+  password    String?
   photo       String?
   phone       Int?
   coordinates DriverCoordinates[]
-  //messages        Message[]           @relation("DriverMessages")
 
   // Rota atual do motorista
   current_route_id Int?
-  current_route    Route? @relation(fields: [current_route_id], references: [id])
+  current_route    Route? @relation(fields: [current_route_id], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
+
+  @@index([current_route_id])
 }
 
 model MiniBusStop {
   id          Int      @id @default(autoincrement())
   stop_name   String?  @unique
-  distrit     String?
+  district    String?
   latitude    Float?
   longitude   Float?
   description String?
@@ -65,7 +65,9 @@ model MiniBusStop {
   createdAt   DateTime @default(now())
 
   cadetes Cadetes[]
-  route   Route     @relation(fields: [route_id], references: [id])
+  route   Route     @relation(fields: [route_id], references: [id], onDelete: Cascade)
+
+  @@index([route_id])
 }
 
 model Route {
@@ -82,29 +84,22 @@ model Route {
 }
 
 model Message {
-  id         Int    @id @default(autoincrement())
+  id         Int        @id @default(autoincrement())
   chat_id    Int
   sender_id  Int
-  senderType Int
+  senderType SenderType
   content    String
 
   createdAt DateTime @default(now())
-  chat      Chat     @relation(fields: [chat_id], references: [id])
-
-  //id_driver Int
-  //id_cadete Int
-  //message   String
-
-  //cadete    Cadetes @relation("CadeteMessages", fields: [id_cadete], references: [id])
-  //driver    Drivers @relation("DriverMessages", fields: [id_driver], references: [id])
+  chat      Chat     @relation(fields: [chat_id], references: [id], onDelete: Cascade)
 }
 
 model Chat {
-  id        Int       @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   full_name String?
   type      ChatType
   route_id  Int?
-  createdAt DateTime  @default(now())
+  createdAt DateTime   @default(now())
   messages  Message[]
 
   @@unique([type, route_id])
@@ -115,11 +110,17 @@ enum ChatType {
   ROUTE
 }
 
+enum SenderType {
+  CADETE
+  DRIVER
+  ADMIN
+}
+
 model DriverCoordinates {
   id        Int      @id @default(autoincrement())
   lat       Float
   long      Float
   id_driver Int      @unique
   createdAt DateTime @default(now())
-  driver    Drivers  @relation(fields: [id_driver], references: [id])
+  driver    Drivers  @relation(fields: [id_driver], references: [id], onDelete: Cascade)
 }

@@ -1,13 +1,22 @@
 import fp from 'fastify-plugin'
+import { PrismaClient } from '@prisma/client'
 import prisma from '../infrastructure/database/prismaClient'
 
 export default fp(async (fastify) => {
-  await prisma.$connect()
+  try {
+    await prisma.$connect()
+  } catch (err) {
+    fastify.log.warn('Could not connect to database on startup: ' + (err as Error).message)
+  }
 
   fastify.decorate('prisma', prisma)
 
   fastify.addHook('onClose', async (app) => {
-    await app.prisma.$disconnect()
+    try {
+      await app.prisma.$disconnect()
+    } catch {
+      // ignore disconnect errors
+    }
   })
 })
 

@@ -11,7 +11,7 @@ export class DeleteCadeteUseCase {
 
     const existing = await this.repo.getById(id)
     if (!existing) {
-      throw new ApplicationError("Cadete não encontrado", 404)
+      throw new ApplicationError("Cadete not found", 404)
     }
 
     await this.repo.delete(id)

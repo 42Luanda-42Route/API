@@ -4,8 +4,8 @@ export interface Cadete {
   username: string | null
   email: string | null
   city: string | null
-  distrit: string | null
-  prioritityList: boolean
+  district: string | null
+  priorityList: boolean
   phone: number | null
   stopId: number | null
   createdAt: Date

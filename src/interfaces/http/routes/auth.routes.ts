@@ -20,8 +20,8 @@ export default async function authRoutes(app: FastifyInstance) {
     new LoginAdminUseCase(adminRepo),
   )
 
-  app.get("/auth/42/login", (req, reply) => controller.redirectTo42(req, reply))
-  app.get("/auth/42/callback", (req, reply) => controller.callback42(req, reply))
-  app.post("/auth/42/driver/login", (req, reply) => controller.loginDriver(req, reply))
-  app.post("/auth/42/admin/login", (req, reply) => controller.loginAdmin(req, reply))
+  app.get("/auth/42/login", (req, reply) => controller.redirectTo42(req as any, reply))
+  app.get("/auth/42/callback", (req, reply) => controller.callback42(req as any, reply))
+  app.post("/auth/42/driver/login", (req, reply) => controller.loginDriver(req as any, reply))
+  app.post("/auth/42/admin/login", (req, reply) => controller.loginAdmin(req as any, reply))
 }

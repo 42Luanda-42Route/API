@@ -28,14 +28,21 @@ export default async function driverRoutes(app: FastifyInstance) {
   )
 
   // Public routes
-  app.get("/drivers", (req, reply) => controller.list(req, reply))
-  app.get("/driver/:id", (req, reply) => controller.getById(req, reply))
+  app.get("/drivers", (req, reply) => controller.list(req as any, reply))
+  app.get("/drivers/:id", (req, reply) => controller.getById(req as any, reply))
+  app.get("/driver/:id", (req, reply) => controller.getById(req as any, reply))
 
   // Protected routes
+  app.post("/drivers", { preHandler: [app.authenticate] }, async (req, reply) => controller.create(req as any, reply))
   app.post("/driver", { preHandler: [app.authenticate] }, async (req, reply) => controller.create(req as any, reply))
+  app.put("/drivers/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.update(req as any, reply))
   app.put("/driver/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.update(req as any, reply))
+  app.delete("/drivers/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.delete(req as any, reply))
   app.delete("/driver/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.delete(req as any, reply))
+  app.put("/drivers/:id/location", { preHandler: [app.authenticate] }, async (req, reply) => controller.updateLocationHandler(req as any, reply))
   app.put("/driver/location/socket/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.updateLocationHandler(req as any, reply))
+  app.post("/drivers/:id/assign-route", { preHandler: [app.authenticate] }, async (req, reply) => controller.assignRouteHandler(req as any, reply))
   app.post("/driver/assign/route/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.assignRouteHandler(req as any, reply))
+  app.delete("/drivers/:id/leave-route", { preHandler: [app.authenticate] }, async (req, reply) => controller.leaveRouteHandler(req as any, reply))
   app.delete("/driver/leave/route/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.leaveRouteHandler(req as any, reply))
 }

@@ -15,8 +15,12 @@ export default async function routeRoutes(app: FastifyInstance) {
     new GetRouteByIdUseCase(routeRepository),
   )
 
-  app.post("/routes", (req, reply) => controller.create(req, reply))
-  app.post("/routes/:id/stops", (req, reply) => controller.addStops(req, reply))
-  app.get("/routes", (req, reply) => controller.list(req, reply))
-  app.get("/route/:id", (req, reply) => controller.getById(req, reply))
+  // Public routes
+  app.get("/routes", (req, reply) => controller.list(req as any, reply))
+  app.get("/routes/:id", (req, reply) => controller.getById(req as any, reply))
+  app.get("/route/:id", (req, reply) => controller.getById(req as any, reply))
+
+  // Protected routes
+  app.post("/routes", { preHandler: [app.authenticate] }, async (req, reply) => controller.create(req as any, reply))
+  app.post("/routes/:id/stops", { preHandler: [app.authenticate] }, async (req, reply) => controller.addStops(req as any, reply))
 }

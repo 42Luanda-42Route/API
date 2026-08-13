@@ -19,9 +19,16 @@ export default async function minibusstopsRoutes(app: FastifyInstance) {
     new DeleteStopUseCase(stopRepo),
   )
 
-  app.get("/minibusstops", (req, reply) => controller.list(req, reply))
-  app.get("/minibusstop/:id", (req, reply) => controller.getById(req, reply))
-  app.post("/minibusstop", (req, reply) => controller.create(req, reply))
-  app.put("/minibusstop/:id", (req, reply) => controller.update(req, reply))
-  app.delete("/minibusstop/:id", (req, reply) => controller.delete(req, reply))
+  // Public routes
+  app.get("/minibusstops", (req, reply) => controller.list(req as any, reply))
+  app.get("/minibusstops/:id", (req, reply) => controller.getById(req as any, reply))
+  app.get("/minibusstop/:id", (req, reply) => controller.getById(req as any, reply))
+
+  // Protected routes
+  app.post("/minibusstops", { preHandler: [app.authenticate] }, async (req, reply) => controller.create(req as any, reply))
+  app.post("/minibusstop", { preHandler: [app.authenticate] }, async (req, reply) => controller.create(req as any, reply))
+  app.put("/minibusstops/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.update(req as any, reply))
+  app.put("/minibusstop/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.update(req as any, reply))
+  app.delete("/minibusstops/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.delete(req as any, reply))
+  app.delete("/minibusstop/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.delete(req as any, reply))
 }

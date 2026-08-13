@@ -20,11 +20,11 @@ export default async function adminRoutes(app: FastifyInstance) {
   )
 
   // Public routes
-  app.get("/admins", (req, reply) => controller.list(req, reply))
-  app.get("/admins/:id", (req, reply) => controller.getById(req, reply))
+  app.get("/admins", (req, reply) => controller.list(req as any, reply))
+  app.get("/admins/:id", (req, reply) => controller.getById(req as any, reply))
 
   // Protected routes
-  app.post("/admin", { preHandler: [app.authenticate] }, async (req, reply) => controller.create(req as any, reply))
+  app.post("/admins", { preHandler: [app.authenticate] }, async (req, reply) => controller.create(req as any, reply))
   app.put("/admins/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.update(req as any, reply))
   app.delete("/admins/:id", { preHandler: [app.authenticate] }, async (req, reply) => controller.delete(req as any, reply))
 }

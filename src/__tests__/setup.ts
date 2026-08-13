@@ -1,0 +1,7 @@
+process.env.DATABASE_URL = process.env.DATABASE_URL || "postgresql://test:test@localhost:5432/testdb"
+process.env.JWT_SECRET = process.env.JWT_SECRET || "test-jwt-secret-key-1234567890"
+process.env.JWT_EXPIRES = process.env.JWT_EXPIRES || "1h"
+process.env.FORTYTWO_CLIENT_ID = process.env.FORTYTWO_CLIENT_ID || "test-client-id"
+process.env.FORTYTWO_CLIENT_SECRET = process.env.FORTYTWO_CLIENT_SECRET || "test-client-secret"
+process.env.APP_URL = process.env.APP_URL || "http://localhost:3000"
+process.env.NODE_ENV = "test"

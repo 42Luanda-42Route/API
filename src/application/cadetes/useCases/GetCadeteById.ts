@@ -12,7 +12,7 @@ export class GetCadeteByIdUseCase {
 
     const cadete = await this.repo.getById(id)
     if (!cadete) {
-      throw new ApplicationError("Cadete não encontrado", 404)
+      throw new ApplicationError("Cadete not found", 404)
     }
 
     return cadete

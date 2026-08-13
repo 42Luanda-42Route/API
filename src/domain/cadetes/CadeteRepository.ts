@@ -1,7 +1,7 @@
 import { Cadete } from "./Cadete"
 
 export interface CadeteRepository {
-  list(): Promise<Cadete[]>
+  list(page?: number, limit?: number): Promise<{ data: Cadete[]; total: number }>
   getById(id: number): Promise<Cadete | null>
   create(data: Partial<Cadete>): Promise<Cadete>
   update(id: number, data: Partial<Cadete>): Promise<Cadete>

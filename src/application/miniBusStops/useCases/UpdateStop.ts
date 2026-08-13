@@ -25,11 +25,11 @@ export class UpdateStopUseCase {
     }
 
     return this.repo.update(id, {
-      stopName: input.stop_name ?? existing.stopName,
-      distrit: input.distrit ?? existing.distrit,
-      latitude: input.latitude ?? existing.latitude,
-      longitude: input.longitude ?? existing.longitude,
-      description: input.description ?? existing.description,
+      stopName: input.stop_name !== undefined ? input.stop_name : existing.stopName,
+      district: input.district !== undefined ? input.district : existing.district,
+      latitude: input.latitude !== undefined ? input.latitude : existing.latitude,
+      longitude: input.longitude !== undefined ? input.longitude : existing.longitude,
+      description: input.description !== undefined ? input.description : existing.description,
       routeId: input.route_id ?? existing.routeId,
     })
   }

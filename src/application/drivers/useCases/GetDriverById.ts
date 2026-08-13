@@ -5,7 +5,7 @@ import { ApplicationError } from "../../errors/ApplicationError"
 export class GetDriverByIdUseCase {
   constructor(private readonly repo: DriverRepository) {}
 
-  async execute(id: number): Promise<Omit<Driver, "passwrd">> {
+  async execute(id: number): Promise<Omit<Driver, "password">> {
     if (!id || Number.isNaN(id)) {
       throw new ApplicationError("Driver id must be valid", 422)
     }
@@ -15,7 +15,7 @@ export class GetDriverByIdUseCase {
       throw new ApplicationError("Driver not found", 404)
     }
 
-    const { passwrd, ...rest } = driver
+    const { password, ...rest } = driver
     return rest
   }
 }

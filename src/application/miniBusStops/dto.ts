@@ -1,6 +1,6 @@
 export interface CreateStopInput {
   stop_name?: string | null
-  distrit?: string | null
+  district?: string | null
   latitude?: number | null
   longitude?: number | null
   description?: string | null
@@ -9,7 +9,7 @@ export interface CreateStopInput {
 
 export interface UpdateStopInput {
   stop_name?: string | null
-  distrit?: string | null
+  district?: string | null
   latitude?: number | null
   longitude?: number | null
   description?: string | null

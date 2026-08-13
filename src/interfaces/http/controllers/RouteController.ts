@@ -55,9 +55,11 @@ export class RouteController {
     }
   }
 
-  async list(req: FastifyRequest, reply: FastifyReply) {
+  async list(req: FastifyRequest<{ Querystring: { page?: string; limit?: string } }>, reply: FastifyReply) {
     try {
-      const result = await this.listRoutes.execute()
+      const page = req.query?.page ? Number(req.query.page) : 1
+      const limit = req.query?.limit ? Number(req.query.limit) : 20
+      const result = await this.listRoutes.execute(page, limit)
       return reply.code(200).send(result)
     } catch (error) {
       return this.handleError(error, reply)
