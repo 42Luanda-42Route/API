@@ -20,8 +20,165 @@ export default async function authRoutes(app: FastifyInstance) {
     new LoginAdminUseCase(adminRepo),
   )
 
-  app.get("/auth/42/login", (req, reply) => controller.redirectTo42(req, reply))
-  app.get("/auth/42/callback", (req, reply) => controller.callback42(req, reply))
-  app.post("/auth/42/driver/login", (req, reply) => controller.loginDriver(req, reply))
-  app.post("/auth/42/admin/login", (req, reply) => controller.loginAdmin(req, reply))
+  app.get(
+    "/auth/42/login",
+    {
+      schema: {
+        tags: ["Auth"],
+        summary: "Iniciar autenticação via 42 Intra OAuth2",
+        description: "Gera a URL de autorização da 42 e redireciona o utilizador para o portal da 42 Intra.",
+        querystring: {
+          type: "object",
+          properties: {
+            redirect: {
+              type: "string",
+              description: "URL de retorno para a aplicação frontend",
+              example: "http://localhost:3000/callback",
+            },
+          },
+        },
+        response: {
+          302: {
+            description: "Redirecionamento para a página de autorização do 42 Intra",
+            type: "null",
+          },
+        },
+      },
+    },
+    (req, reply) => controller.redirectTo42(req as any, reply),
+  )
+
+  app.get(
+    "/auth/42/callback",
+    {
+      schema: {
+        tags: ["Auth"],
+        summary: "Callback da autenticação 42 Intra",
+        description: "Recebe o authorization code do 42 Intra, obtém o perfil do utilizador e emite um token JWT com permissões de CADETE.",
+        querystring: {
+          type: "object",
+          required: ["code"],
+          properties: {
+            code: {
+              type: "string",
+              description: "Código de autorização retornado pela API da 42 Intra",
+              example: "0a1b2c3d4e5f6g7h8i9j",
+            },
+          },
+        },
+        response: {
+          200: {
+            description: "Autenticação bem-sucedida, retorna token JWT",
+            type: "object",
+            properties: {
+              token: { type: "string", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+            },
+          },
+          422: {
+            description: "Parâmetro code em falta ou inválido",
+            type: "object",
+            properties: {
+              error: { type: "string", example: "code is required" },
+            },
+          },
+          502: {
+            description: "Erro ao comunicar com a API da 42 Intra",
+            type: "object",
+            properties: {
+              error: { type: "string", example: "Erro ao buscar perfil no Intra 42" },
+            },
+          },
+        },
+      },
+    },
+    (req, reply) => controller.callback42(req as any, reply),
+  )
+
+  app.post(
+    "/auth/42/driver/login",
+    {
+      schema: {
+        tags: ["Auth"],
+        summary: "Login de Motorista",
+        description: "Autentica um motorista utilizando o seu username ou email e password. Retorna um JWT com a role DRIVER.",
+        body: {
+          type: "object",
+          required: ["username", "password"],
+          properties: {
+            username: {
+              type: "string",
+              description: "Username ou endereço de email do motorista",
+              example: "motorista.silva",
+            },
+            password: {
+              type: "string",
+              description: "Password do motorista",
+              example: "segredo123",
+            },
+          },
+        },
+        response: {
+          200: {
+            description: "Login bem-sucedido, retorna JWT",
+            type: "object",
+            properties: {
+              token: { type: "string", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+            },
+          },
+          401: {
+            description: "Credenciais inválidas",
+            type: "object",
+            properties: {
+              error: { type: "string", example: "Invalid credentials" },
+            },
+          },
+        },
+      },
+    },
+    (req, reply) => controller.loginDriver(req as any, reply),
+  )
+
+  app.post(
+    "/auth/42/admin/login",
+    {
+      schema: {
+        tags: ["Auth"],
+        summary: "Login de Administrador",
+        description: "Autentica um administrador utilizando username ou email e password. Retorna um JWT com a role ADMIN.",
+        body: {
+          type: "object",
+          required: ["username", "password"],
+          properties: {
+            username: {
+              type: "string",
+              description: "Username ou email do administrador",
+              example: "admin",
+            },
+            password: {
+              type: "string",
+              description: "Password do administrador",
+              example: "Admin@2026",
+            },
+          },
+        },
+        response: {
+          200: {
+            description: "Login bem-sucedido, retorna JWT",
+            type: "object",
+            properties: {
+              token: { type: "string", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+            },
+          },
+          401: {
+            description: "Credenciais inválidas",
+            type: "object",
+            properties: {
+              error: { type: "string", example: "Invalid credentials" },
+            },
+          },
+        },
+      },
+    },
+    (req, reply) => controller.loginAdmin(req as any, reply),
+  )
 }

@@ -1,8 +1,8 @@
 import OAuth2 from "simple-oauth2"
-import jwt from "jsonwebtoken"
 import { oauthConfig } from "../../../config/oauth42"
 import { CadeteRepository } from "../../../domain/cadetes/CadeteRepository"
 import { ApplicationError } from "../../errors/ApplicationError"
+import { generateToken } from "../../../utils/jwt"
 
 const client = new OAuth2.AuthorizationCode({
   client: {
@@ -54,7 +54,7 @@ export class Handle42CallbackUseCase {
     const isUser = Boolean(cadete)
     const userId = cadete?.id ?? profile.id
 
-    const jwtToken = jwt.sign(
+    const jwtToken = generateToken(
       {
         id: userId,
         full_name,
@@ -67,8 +67,7 @@ export class Handle42CallbackUseCase {
         isDBUser: isUser,
         role: "CADETE",
       },
-      process.env.JWT_SECRET as string,
-      { expiresIn: "15m" },
+      "15m",
     )
 
     return { token: jwtToken }

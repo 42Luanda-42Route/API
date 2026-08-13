@@ -16,9 +16,11 @@ export class MiniBusStopController {
     private readonly deleteStop: DeleteStopUseCase,
   ) {}
 
-  async list(req: FastifyRequest, reply: FastifyReply) {
+  async list(req: FastifyRequest<{ Querystring: { page?: string; limit?: string } }>, reply: FastifyReply) {
     try {
-      const result = await this.listStops.execute()
+      const page = req.query?.page ? Number(req.query.page) : 1
+      const limit = req.query?.limit ? Number(req.query.limit) : 20
+      const result = await this.listStops.execute(page, limit)
       return reply.send(result)
     } catch (error) {
       return this.handle(error, reply)
@@ -55,7 +57,7 @@ export class MiniBusStopController {
   async delete(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
     try {
       await this.deleteStop.execute(Number(req.params.id))
-      return reply.send({ message: "Bus stop deleted successfully" })
+      return reply.status(204).send()
     } catch (error) {
       return this.handle(error, reply)
     }

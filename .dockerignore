@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+schemas
+*.log
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+README.md
+implementation_plan.md
+audit_report.md
+42RouteAPI_documentation.md

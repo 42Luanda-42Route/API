@@ -3,8 +3,8 @@ export interface CreateCadeteInput {
   username?: string | null
   email?: string | null
   city?: string | null
-  distrit?: string | null
-  prioritityList?: boolean
+  district?: string | null
+  priorityList?: boolean
   phone?: number | null
   stop_id?: number | null
 }
@@ -14,13 +14,8 @@ export interface UpdateCadeteInput {
   username?: string | null
   email?: string | null
   city?: string | null
-  distrit?: string | null
-  prioritityList?: boolean
+  district?: string | null
+  priorityList?: boolean
   phone?: number | null
   stop_id?: number | null
-}
-
-export interface LoginCadeteInput {
-  username: string
-  password: string
 }

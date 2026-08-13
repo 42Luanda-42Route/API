@@ -2,7 +2,7 @@ export interface CreateDriverInput {
   full_name?: string | null
   username?: string | null
   email?: string | null
-  passwrd: string
+  password: string
   photo?: string | null
   phone?: number | null
 }
@@ -11,7 +11,7 @@ export interface UpdateDriverInput {
   full_name?: string | null
   username?: string | null
   email?: string | null
-  passwrd?: string | null
+  password?: string | null
   photo?: string | null
   phone?: number | null
   current_route_id?: number | null

@@ -1,17 +1,33 @@
-FROM node:20-alpine
+# Stage 1: Build
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 COPY package*.json ./
+COPY prisma ./prisma/
 
-RUN npm install
+RUN npm ci
 
 COPY . .
 
-#RUN npx prisma generate || true
+RUN npx prisma generate
+RUN npm run build
+
+# Stage 2: Production
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY package*.json ./
+COPY prisma ./prisma/
+
+RUN npm ci --omit=dev && npx prisma generate
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/schemas ./schemas
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start:dev"]
-
-#https://youtu.be/biGUPJy92Z0?si=vcbLH1ZPyR8J9B35
+CMD ["node", "dist/main.js"]

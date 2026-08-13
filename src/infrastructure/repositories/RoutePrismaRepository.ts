@@ -1,19 +1,23 @@
-import { Drivers, MiniBusStop, Route as PrismaRoute, PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@prisma/client"
 import { RouteRepository } from "../../domain/routes/RouteRepository"
 import { DriverSummary, MiniBusStopSummary, Route, RouteWithRelations } from "../../domain/routes/Route"
+import { handlePrismaError } from "../errors/PrismaErrorHandler"
 
 export class RoutePrismaRepository implements RouteRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async create(data: { routeName: string; description?: string | null }): Promise<Route> {
-    const route = await this.prisma.route.create({
-      data: {
-        route_name: data.routeName,
-        description: data.description ?? null,
-      },
-    })
-
-    return this.mapRoute(route)
+    try {
+      const route = await this.prisma.route.create({
+        data: {
+          route_name: data.routeName,
+          description: data.description ?? null,
+        },
+      })
+      return this.mapRoute(route)
+    } catch (error) {
+      handlePrismaError(error)
+    }
   }
 
   async addStops(routeId: number, stopIds: number[]): Promise<RouteWithRelations | null> {
@@ -25,26 +29,30 @@ export class RoutePrismaRepository implements RouteRepository {
     return this.getById(routeId)
   }
 
-  async list(): Promise<RouteWithRelations[]> {
-    const routes = await this.prisma.route.findMany({
-      include: {
-        stops: true,
-        drivers: {
-          select: {
-            id: true,
-            full_name: true,
-            username: true,
-            email: true,
-            phone: true,
-            photo: true,
-            current_route_id: true,
+  async list(page = 1, limit = 20): Promise<{ data: RouteWithRelations[]; total: number }> {
+    const [routes, total] = await Promise.all([
+      this.prisma.route.findMany({
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          stops: true,
+          drivers: {
+            select: {
+              id: true,
+              full_name: true,
+              username: true,
+              email: true,
+              phone: true,
+              photo: true,
+              current_route_id: true,
+            },
           },
         },
-      },
-      orderBy: { id: "asc" },
-    })
-
-    return routes.map((route) => this.mapRouteWithRelations(route))
+        orderBy: { id: "asc" },
+      }),
+      this.prisma.route.count(),
+    ])
+    return { data: routes.map((route: any) => this.mapRouteWithRelations(route)), total }
   }
 
   async getById(id: number): Promise<RouteWithRelations | null> {
@@ -69,7 +77,7 @@ export class RoutePrismaRepository implements RouteRepository {
     return route ? this.mapRouteWithRelations(route) : null
   }
 
-  private mapRoute(route: PrismaRoute): Route {
+  private mapRoute(route: any): Route {
     return {
       id: route.id,
       routeName: route.route_name,
@@ -78,11 +86,11 @@ export class RoutePrismaRepository implements RouteRepository {
     }
   }
 
-  private mapStop(stop: MiniBusStop): MiniBusStopSummary {
+  private mapStop(stop: any): MiniBusStopSummary {
     return {
       id: stop.id,
       stopName: stop.stop_name,
-      distrit: stop.distrit,
+      district: stop.district,
       latitude: stop.latitude,
       longitude: stop.longitude,
       description: stop.description,
@@ -90,7 +98,7 @@ export class RoutePrismaRepository implements RouteRepository {
     }
   }
 
-  private mapDriver(driver: Pick<Drivers, "id" | "full_name" | "username" | "email" | "phone" | "photo" | "current_route_id">): DriverSummary {
+  private mapDriver(driver: any): DriverSummary {
     return {
       id: driver.id,
       fullName: driver.full_name,
@@ -102,11 +110,11 @@ export class RoutePrismaRepository implements RouteRepository {
     }
   }
 
-  private mapRouteWithRelations(route: PrismaRoute & { stops: MiniBusStop[]; drivers: Array<Pick<Drivers, "id" | "full_name" | "username" | "email" | "phone" | "photo" | "current_route_id">> }): RouteWithRelations {
+  private mapRouteWithRelations(route: any): RouteWithRelations {
     return {
       ...this.mapRoute(route),
-      stops: route.stops.map((stop) => this.mapStop(stop)),
-      drivers: route.drivers.map((driver) => this.mapDriver(driver)),
+      stops: (route.stops || []).map((stop: any) => this.mapStop(stop)),
+      drivers: (route.drivers || []).map((driver: any) => this.mapDriver(driver)),
     }
   }
 }

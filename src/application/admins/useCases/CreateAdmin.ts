@@ -12,6 +12,17 @@ export class CreateAdminUseCase {
       throw new ApplicationError("Password must be at least 8 characters", 422)
     }
 
+    if (input.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
+      throw new ApplicationError("Invalid email format", 422)
+    }
+
+    if (input.username || input.email) {
+      const existing = await this.repo.findByUsernameOrEmail(input.username || input.email || "")
+      if (existing) {
+        throw new ApplicationError("Username or email already exists", 409)
+      }
+    }
+
     const hashed = await bcrypt.hash(input.password, 10)
     return this.repo.create({
       fullName: input.full_name ?? null,

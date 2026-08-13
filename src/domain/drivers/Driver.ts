@@ -3,7 +3,7 @@ export interface Driver {
   fullName: string | null
   username: string | null
   email: string | null
-  passwrd: string | null
+  password: string | null
   photo: string | null
   phone: number | null
   currentRouteId: number | null

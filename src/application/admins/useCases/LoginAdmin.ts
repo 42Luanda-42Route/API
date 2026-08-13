@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
 import { AdminRepository } from "../../../domain/admins/AdminRepository"
 import { ApplicationError } from "../../errors/ApplicationError"
 import { LoginAdminInput } from "../dto"
+import { generateToken } from "../../../utils/jwt"
 
 export class LoginAdminUseCase {
   constructor(private readonly repo: AdminRepository) {}
@@ -10,24 +10,20 @@ export class LoginAdminUseCase {
   async execute(input: LoginAdminInput): Promise<{ token: string }> {
     const admin = await this.repo.findByUsernameOrEmail(input.username)
     if (!admin) {
-      throw new ApplicationError("username or email not found", 404)
+      throw new ApplicationError("Invalid credentials", 401)
     }
 
     const ok = await bcrypt.compare(input.password, admin.password ?? "")
     if (!ok) {
-      throw new ApplicationError("Credenciais erradas", 401)
+      throw new ApplicationError("Invalid credentials", 401)
     }
 
-    const jwtToken = jwt.sign(
-      {
-        id: admin.id,
-        username: admin.username,
-        email: admin.email,
-        role: "ADMIN",
-      },
-      process.env.JWT_SECRET as string,
-      { expiresIn: "15m" },
-    )
+    const jwtToken = generateToken({
+      id: admin.id,
+      username: admin.username,
+      email: admin.email,
+      role: "ADMIN",
+    })
 
     return { token: jwtToken }
   }

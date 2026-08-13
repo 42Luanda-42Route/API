@@ -30,9 +30,11 @@ export class DriverController {
     private readonly loginDriver: LoginDriverUseCase,
   ) {}
 
-  async list(req: FastifyRequest, reply: FastifyReply) {
+  async list(req: FastifyRequest<{ Querystring: { page?: string; limit?: string } }>, reply: FastifyReply) {
     try {
-      const result = await this.listDrivers.execute()
+      const page = req.query?.page ? Number(req.query.page) : 1
+      const limit = req.query?.limit ? Number(req.query.limit) : 20
+      const result = await this.listDrivers.execute(page, limit)
       return reply.send(result)
     } catch (error) {
       return this.handle(error, reply)
@@ -51,7 +53,7 @@ export class DriverController {
   async create(req: FastifyRequest<{ Body: CreateDriverInput }>, reply: FastifyReply) {
     try {
       const result = await this.createDriver.execute(req.body)
-      const { passwrd, ...safe } = result
+      const { password, ...safe } = result
       return reply.code(201).send(safe)
     } catch (error) {
       return this.handle(error, reply)
@@ -61,7 +63,7 @@ export class DriverController {
   async update(req: FastifyRequest<{ Params: { id: string }; Body: UpdateDriverInput }>, reply: FastifyReply) {
     try {
       const result = await this.updateDriver.execute(Number(req.params.id), req.body)
-      const { passwrd, ...safe } = result as any
+      const { password, ...safe } = result as any
       return reply.send(safe)
     } catch (error) {
       return this.handle(error, reply)
@@ -71,30 +73,20 @@ export class DriverController {
   async updateLocationHandler(req: FastifyRequest<{ Params: { id: string }; Body: { lat: number; long: number } }>, reply: FastifyReply) {
     try {
       const driverId = Number(req.params.id)
-      
-      console.log(`\n✅ HANDLER HTTP: PUT /driver/location/socket/:id`);
-      console.log(`   Input: { driverId: ${driverId}, lat: ${req.body.lat}, long: ${req.body.long} }`);
-      
+
       const result = await this.updateLocation.execute({
         driverId,
         lat: req.body.lat,
         long: req.body.long,
       })
 
-      console.log(`   ✅ Localização salva no BD`);
-
       // Get driver info to find their assigned route for room-scoped broadcast
       const driver = await this.getDriverById.execute(driverId)
       const routeId = driver?.currentRouteId
       const io = (req.server as any).io
 
-      console.log(`   Driver: ${driver?.fullName || 'NÃO ENCONTRADO'}`);
-      console.log(`   Rota ID: ${routeId || 'NENHUMA'}`);
-      console.log(`   Socket.IO disponível: ${io ? 'SIM' : 'NÃO'}`);
-
       if (io && routeId) {
         // Broadcast to the specific route room (not all clients)
-        console.log(`   📡 Emitindo para sala: route_${routeId}`);
         io.to(`route_${routeId}`).emit("driver:location", {
           id_driver: driverId,
           lat: req.body.lat,
@@ -102,10 +94,8 @@ export class DriverController {
           routeId,
           driverName: driver?.fullName ?? driver?.username ?? null,
         })
-        console.log(`   ✅ Emitido com sucesso`);
       } else if (io) {
         // Fallback: if no route assigned, broadcast to all (backward compat)
-        console.log(`   📡 Sem rota específica, emitindo para ALL`);
         io.emit("driver:location", {
           id_driver: driverId,
           lat: req.body.lat,
@@ -113,14 +103,10 @@ export class DriverController {
           routeId: null,
           driverName: driver?.fullName ?? driver?.username ?? null,
         })
-        console.log(`   ✅ Emitido com sucesso`);
-      } else {
-        console.log(`   ⚠️ Nenhum cliente WebSocket conectado`);
       }
 
       return reply.send(result)
     } catch (error) {
-      console.error(`   ❌ Erro:`, error);
       return this.handle(error, reply)
     }
   }
@@ -140,7 +126,7 @@ export class DriverController {
         driverId: Number(req.params.id),
         current_route_id: req.body.current_route_id,
       })
-      const { passwrd, ...safe } = result as any
+      const { password, ...safe } = result as any
       return reply.send(safe)
     } catch (error) {
       return this.handle(error, reply)
@@ -155,7 +141,7 @@ export class DriverController {
       const oldRouteId = driver?.currentRouteId
 
       const result = await this.leaveRoute.execute(driverId)
-      const { passwrd, ...safe } = result as any
+      const { password, ...safe } = result as any
 
       // Notify socket room that driver left (if there was a route)
       const io = (req.server as any).io

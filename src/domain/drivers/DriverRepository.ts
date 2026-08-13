@@ -1,7 +1,7 @@
 import { Driver, DriverCoordinates } from "./Driver"
 
 export interface DriverRepository {
-  list(): Promise<Driver[]>
+  list(page?: number, limit?: number): Promise<{ data: Driver[]; total: number }>
   getById(id: number): Promise<Driver | null>
   create(data: Partial<Driver>): Promise<Driver>
   update(id: number, data: Partial<Driver>): Promise<Driver>
