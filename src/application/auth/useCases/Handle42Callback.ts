@@ -50,9 +50,16 @@ export class Handle42CallbackUseCase {
     const avatar = { link: profile.image.link }
     const full_name = profile.usual_full_name
 
-    const cadete = await this.cadetes.findByUsernameOrEmail(profile.email)
-    const isUser = Boolean(cadete)
+    let cadete = await this.cadetes.findByUsernameOrEmail(profile.email)
+    if (!cadete && profile.login) {
+      cadete = await this.cadetes.findByUsernameOrEmail(profile.login)
+    }
+
+    const isDBUser = Boolean(cadete)
     const userId = cadete?.id ?? profile.id
+    const hasDistrict = Boolean(cadete?.district)
+    const hasStop = Boolean(cadete?.stopId)
+    const needsOnboarding = !isDBUser || !hasDistrict || !hasStop
 
     const jwtToken = generateToken(
       {
@@ -64,12 +71,33 @@ export class Handle42CallbackUseCase {
         course: courseName,
         level,
         grade,
-        isDBUser: isUser,
+        isDBUser,
+        district: cadete?.district ?? null,
+        stopId: cadete?.stopId ?? null,
+        hasDistrict,
+        hasStop,
+        needsOnboarding,
         role: "CADETE",
       },
-      "15m",
+      "7d",
     )
 
-    return { token: jwtToken }
+    return {
+      token: jwtToken,
+      isDBUser,
+      needsOnboarding,
+      hasDistrict,
+      hasStop,
+      cadete: cadete
+        ? {
+            id: cadete.id,
+            fullName: cadete.fullName,
+            username: cadete.username,
+            email: cadete.email,
+            district: cadete.district,
+            stopId: cadete.stopId,
+          }
+        : null,
+    }
   }
 }
