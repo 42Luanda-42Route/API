@@ -48,6 +48,8 @@ export default async function authRoutes(app: FastifyInstance) {
     (req, reply) => controller.redirectTo42(req as any, reply),
   )
 
+  app.get("/auth/42", (req, reply) => controller.redirectTo42(req as any, reply))
+
   app.get(
     "/auth/42/callback",
     {
