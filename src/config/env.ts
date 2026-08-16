@@ -13,7 +13,8 @@ function requireEnv(name: string): string {
 export const env = {
   DATABASE_URL: requireEnv("DATABASE_URL"),
   JWT_SECRET: requireEnv("JWT_SECRET"),
-  JWT_EXPIRES: process.env.JWT_EXPIRES || "1h",
+  JWT_EXPIRES: process.env.JWT_EXPIRES || "7d",
+  JWT_REFRESH_EXPIRES: process.env.JWT_REFRESH_EXPIRES || "30d",
   FORTYTWO_CLIENT_ID: requireEnv("FORTYTWO_CLIENT_ID"),
   FORTYTWO_CLIENT_SECRET: requireEnv("FORTYTWO_CLIENT_SECRET"),
   APP_URL: requireEnv("APP_URL"),

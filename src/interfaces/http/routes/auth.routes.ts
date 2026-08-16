@@ -5,6 +5,7 @@ import { Handle42CallbackUseCase } from "../../../application/auth/useCases/Hand
 import { CadetePrismaRepository } from "../../../infrastructure/repositories/CadetePrismaRepository"
 import { LoginDriverUseCase } from "../../../application/drivers/useCases/LoginDriver"
 import { LoginAdminUseCase } from "../../../application/admins/useCases/LoginAdmin"
+import { RefreshTokenUseCase } from "../../../application/auth/useCases/RefreshToken"
 import { DriverPrismaRepository } from "../../../infrastructure/repositories/DriverPrismaRepository"
 import { AdminPrismaRepository } from "../../../infrastructure/repositories/AdminPrismaRepository"
 
@@ -18,6 +19,7 @@ export default async function authRoutes(app: FastifyInstance) {
     new Handle42CallbackUseCase(cadeteRepo),
     new LoginDriverUseCase(driverRepo),
     new LoginAdminUseCase(adminRepo),
+    new RefreshTokenUseCase(),
   )
 
   app.get(
@@ -208,4 +210,40 @@ export default async function authRoutes(app: FastifyInstance) {
     },
     (req, reply) => controller.loginAdmin(req as any, reply),
   )
+
+  app.post(
+    "/auth/42/refresh",
+    {
+      schema: {
+        tags: ["Auth"],
+        summary: "Renovar Token JWT",
+        description: "Valida o token JWT ou refresh token atual e retorna um novo token renovado.",
+        body: {
+          type: "object",
+          properties: {
+            token: { type: "string" },
+            refreshToken: { type: "string" },
+          },
+        },
+        response: {
+          200: {
+            description: "Token renovado com sucesso",
+            type: "object",
+            properties: {
+              token: { type: "string" },
+              refreshToken: { type: "string" },
+              user: { type: "object", additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+    (req, reply) => controller.refreshToken(req as any, reply),
+  )
+
+  app.post(
+    "/auth/refresh",
+    (req, reply) => controller.refreshToken(req as any, reply),
+  )
 }
+
