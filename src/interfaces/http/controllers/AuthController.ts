@@ -3,6 +3,7 @@ import { GenerateAuthUrlUseCase } from "../../../application/auth/useCases/Gener
 import { Handle42CallbackUseCase } from "../../../application/auth/useCases/Handle42Callback"
 import { LoginDriverUseCase } from "../../../application/drivers/useCases/LoginDriver"
 import { LoginAdminUseCase } from "../../../application/admins/useCases/LoginAdmin"
+import { RefreshTokenInput, RefreshTokenUseCase } from "../../../application/auth/useCases/RefreshToken"
 import { ApplicationError } from "../../../application/errors/ApplicationError"
 import { LoginDriverInput } from "../../../application/drivers/dto"
 import { LoginAdminInput } from "../../../application/admins/dto"
@@ -13,6 +14,7 @@ export class AuthController {
     private readonly handle42Callback: Handle42CallbackUseCase,
     private readonly loginDriverUseCase: LoginDriverUseCase,
     private readonly loginAdminUseCase: LoginAdminUseCase,
+    private readonly refreshTokenUseCase: RefreshTokenUseCase,
   ) {}
 
   async redirectTo42(request: FastifyRequest, reply: FastifyReply) {
@@ -29,7 +31,12 @@ export class AuthController {
     try {
       const { code, state, redirect } = request.query as { code: string; state?: string; redirect?: string }
       const result = await this.handle42Callback.execute(code)
-      const targetUrl = state || redirect
+      const targetUrl =
+        state && state !== "undefined" && state.trim() !== ""
+          ? state
+          : redirect && redirect !== "undefined" && redirect.trim() !== ""
+            ? redirect
+            : undefined
 
       if (targetUrl) {
         const separator = targetUrl.includes("?") ? "&" : "?"
@@ -56,6 +63,24 @@ export class AuthController {
   async loginAdmin(req: FastifyRequest<{ Body: LoginAdminInput }>, reply: FastifyReply) {
     try {
       const result = await this.loginAdminUseCase.execute(req.body)
+      return reply.send(result)
+    } catch (error) {
+      return this.handle(error, reply)
+    }
+  }
+
+  async refreshToken(req: FastifyRequest<{ Body?: RefreshTokenInput; Headers?: { authorization?: string } }>, reply: FastifyReply) {
+    try {
+      const authHeader = req.headers.authorization
+      const headerToken = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : authHeader
+      const body = req.body || {}
+      const token = body.token || headerToken
+      const refreshToken = body.refreshToken
+
+      const result = await this.refreshTokenUseCase.execute({
+        token,
+        refreshToken,
+      })
       return reply.send(result)
     } catch (error) {
       return this.handle(error, reply)

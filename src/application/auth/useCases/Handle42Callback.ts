@@ -46,9 +46,15 @@ export class Handle42CallbackUseCase {
     const mainCursus = profile.cursus_users.find((c: any) => c.cursus.name === "42cursus")
     const courseName = mainCursus?.cursus?.name
     const level = mainCursus?.level
-    const grade = mainCursus?.grade
-    const avatar = { link: profile.image.link }
-    const full_name = profile.usual_full_name
+    const avatar = {
+      link:
+        profile.image?.link ||
+        profile.image?.versions?.medium ||
+        profile.image?.versions?.small ||
+        profile.image_url ||
+        null,
+    }
+    const full_name = profile.usual_full_name || profile.displayname || profile.login
 
     let cadete = await this.cadetes.findByUsernameOrEmail(profile.email)
     if (!cadete && profile.login) {
