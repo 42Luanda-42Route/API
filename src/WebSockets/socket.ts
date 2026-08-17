@@ -8,7 +8,7 @@ const routeLocationState: Record<number, RouteLocationState> = {}
 const driverLastUpdate: Record<number, number> = {}
 const cadeteLastUpdate: Record<number, number> = {}
 
-const DRIVER_TIMEOUT = 10_000 // 10 seconds
+const DRIVER_TIMEOUT = 30_000 // 30 seconds
 const LOCATION_THROTTLE_MS = 2_000 // 1 update every 2 seconds
 
 function isDriverActive(routeId: number): boolean {
@@ -40,17 +40,15 @@ export function initSocket(app: FastifyInstance) {
         socket.handshake.auth?.token ||
         (authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : authHeader)
 
-      if (!token || token === "cadete-auth-jwt-token" || token.startsWith("cadete-")) {
-        ;(socket as any).user = { id: 55, username: "gbravo-f", full_name: "Gilson Chipombo", role: "CADETE" }
-        return next()
+      if (!token) {
+        return next(new Error("Authentication error: No token provided"))
       }
 
       const decoded = verifyToken(token)
       ;(socket as any).user = decoded
       next()
     } catch (err) {
-      ;(socket as any).user = { id: 55, username: "gbravo-f", full_name: "Gilson Chipombo", role: "CADETE" }
-      next()
+      return next(new Error("Authentication error: Invalid or expired token"))
     }
   })
 
@@ -118,7 +116,8 @@ export function initSocket(app: FastifyInstance) {
      */
     socket.on("cadete:joinRoute", async (data: { cadeteId?: number; routeId?: number }) => {
       try {
-        const cadeteId = data?.cadeteId || (socket as any).user?.id || 55
+        const authUser = (socket as any).user
+        const cadeteId = data?.cadeteId || authUser?.id
         let cadeteRouteId = data?.routeId
 
         if (!cadeteRouteId && cadeteId) {
@@ -135,29 +134,36 @@ export function initSocket(app: FastifyInstance) {
           cadeteRouteId = cadete?.stop?.route?.id
         }
 
-        const effectiveRouteId = cadeteRouteId || 1
+        const effectiveRouteId = cadeteRouteId || authUser?.currentRouteId
+        if (!effectiveRouteId) {
+          return
+        }
+
         const room = `route_${effectiveRouteId}`
         socket.join(room)
 
-        // Se o motorista já tiver emitido coordenadas ou estiver ativo, envia imediatamente ao cadete
-        const latestDriver = await prisma.driverCoordinates.findFirst({
-          where: {
-            driver: {
-              current_route_id: effectiveRouteId,
-            },
-          },
-          include: {
-            driver: true,
-          },
-        })
+        // Apenas envia a localização ao vivo se o motorista estiver REALMENTE ativo no momento
+        if (isDriverActive(effectiveRouteId)) {
+          const state = routeLocationState[effectiveRouteId]
+          const driverCoords = await prisma.driverCoordinates.findUnique({
+            where: { id_driver: state.sourceId },
+            include: { driver: true },
+          })
 
-        if (latestDriver) {
-          socket.emit("driver:location", {
-            id_driver: latestDriver.id_driver,
-            lat: latestDriver.lat,
-            long: latestDriver.long,
+          if (driverCoords) {
+            socket.emit("driver:location", {
+              id_driver: driverCoords.id_driver,
+              lat: driverCoords.lat,
+              long: driverCoords.long,
+              routeId: effectiveRouteId,
+              driverName: driverCoords.driver?.full_name || state.sourceName || "Motorista da Rota",
+              isActive: true,
+            })
+          }
+        } else {
+          // Se o motorista não estiver ativo no momento, avisa o cadete explicitamente
+          socket.emit("driver:inactive", {
             routeId: effectiveRouteId,
-            driverName: latestDriver.driver?.full_name || "Motorista da Rota",
           })
         }
       } catch (err) {
