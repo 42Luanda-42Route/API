@@ -63,9 +63,26 @@ export class Handle42CallbackUseCase {
     }
 
     const isDBUser = Boolean(cadete)
-    const userId = cadete?.id ?? profile.id
-    const hasDistrict = Boolean(cadete?.district)
-    const hasStop = Boolean(cadete?.stopId)
+
+    if (!cadete) {
+      try {
+        cadete = await this.cadetes.create({
+          fullName: full_name,
+          username: profile.login,
+          email: profile.email,
+        })
+      } catch (err) {
+        // Corrida entre pedidos concorrentes do mesmo callback: outro pedido já criou o registo.
+        cadete =
+          (await this.cadetes.findByUsernameOrEmail(profile.email)) ??
+          (profile.login ? await this.cadetes.findByUsernameOrEmail(profile.login) : null)
+        if (!cadete) throw err
+      }
+    }
+
+    const userId = cadete.id
+    const hasDistrict = Boolean(cadete.district)
+    const hasStop = Boolean(cadete.stopId)
     const needsOnboarding = !isDBUser || !hasDistrict || !hasStop
 
     const jwtToken = generateToken(
@@ -79,8 +96,8 @@ export class Handle42CallbackUseCase {
         level,
         grade,
         isDBUser,
-        district: cadete?.district ?? null,
-        stopId: cadete?.stopId ?? null,
+        district: cadete.district,
+        stopId: cadete.stopId,
         hasDistrict,
         hasStop,
         needsOnboarding,
@@ -95,16 +112,14 @@ export class Handle42CallbackUseCase {
       needsOnboarding,
       hasDistrict,
       hasStop,
-      cadete: cadete
-        ? {
-            id: cadete.id,
-            fullName: cadete.fullName,
-            username: cadete.username,
-            email: cadete.email,
-            district: cadete.district,
-            stopId: cadete.stopId,
-          }
-        : null,
+      cadete: {
+        id: cadete.id,
+        fullName: cadete.fullName,
+        username: cadete.username,
+        email: cadete.email,
+        district: cadete.district,
+        stopId: cadete.stopId,
+      },
     }
   }
 }

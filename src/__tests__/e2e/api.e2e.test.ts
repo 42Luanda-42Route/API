@@ -135,6 +135,22 @@ describe("E2E API Endpoints Test", () => {
       })
       expect(response.statusCode).toBe(401)
     })
+
+    it("GET /api/stats/overview should return 401 without token", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/stats/overview",
+      })
+      expect(response.statusCode).toBe(401)
+    })
+
+    it("GET /api/stats/routes should return 401 without token", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/stats/routes",
+      })
+      expect(response.statusCode).toBe(401)
+    })
   })
 
   describe("GET Public Routes", () => {

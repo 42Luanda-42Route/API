@@ -17,6 +17,7 @@ import authRoutes from "./interfaces/http/routes/auth.routes"
 import minibusstopsRoutes from "./interfaces/http/routes/miniBusStops.routes"
 import routeRoutes from "./interfaces/http/routes/route.routes"
 import healthRoutes from "./interfaces/http/routes/health.routes"
+import statsRoutes from "./interfaces/http/routes/stats.routes"
 
 export async function buildApp() {
   const app = Fastify({
@@ -66,6 +67,7 @@ export async function buildApp() {
         { name: "MiniBusStops", description: "Gestão de Paragens de Minibus/Autocarro" },
         { name: "Routes", description: "Gestão de Rotas de Transporte e Associação de Paragens" },
         { name: "Health", description: "Verificação de Saúde da API e Conectividade com a Base de Dados" },
+        { name: "Stats", description: "Estatísticas Agregadas para o Dashboard Administrativo" },
       ],
       components: {
         securitySchemes: {
@@ -176,6 +178,7 @@ export async function buildApp() {
   app.register(cadeteRoutes, { prefix: "/api" })
   app.register(driversRoutes, { prefix: "/api" })
   app.register(minibusstopsRoutes, { prefix: "/api" })
+  app.register(statsRoutes, { prefix: "/api" })
 
   return app
 }
