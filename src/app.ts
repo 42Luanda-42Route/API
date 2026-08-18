@@ -17,6 +17,7 @@ import authRoutes from "./interfaces/http/routes/auth.routes"
 import minibusstopsRoutes from "./interfaces/http/routes/miniBusStops.routes"
 import routeRoutes from "./interfaces/http/routes/route.routes"
 import healthRoutes from "./interfaces/http/routes/health.routes"
+import qrRoutes from "./interfaces/http/routes/qr.routes"
 
 export async function buildApp() {
   const app = Fastify({
@@ -65,6 +66,7 @@ export async function buildApp() {
         { name: "Drivers", description: "Gestão de Motoristas, Atribuição de Rotas e Localização" },
         { name: "MiniBusStops", description: "Gestão de Paragens de Minibus/Autocarro" },
         { name: "Routes", description: "Gestão de Rotas de Transporte e Associação de Paragens" },
+        { name: "QR", description: "Leitura de QR de rota (motorista) e QR dinâmico de embarque/elegibilidade (cadete)" },
         { name: "Health", description: "Verificação de Saúde da API e Conectividade com a Base de Dados" },
       ],
       components: {
@@ -176,6 +178,7 @@ export async function buildApp() {
   app.register(cadeteRoutes, { prefix: "/api" })
   app.register(driversRoutes, { prefix: "/api" })
   app.register(minibusstopsRoutes, { prefix: "/api" })
+  app.register(qrRoutes, { prefix: "/api" })
 
   return app
 }
