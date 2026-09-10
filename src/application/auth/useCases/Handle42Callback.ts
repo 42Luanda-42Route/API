@@ -30,7 +30,12 @@ export class Handle42CallbackUseCase {
       grant_type: "authorization_code" as const,
     }
 
-    const accessToken: any = await client.getToken(tokenParams)
+    let accessToken: any
+    try {
+      accessToken = await client.getToken(tokenParams)
+    } catch (error) {
+      throw mapIntraTokenExchangeError(error)
+    }
     const intraToken = accessToken.token.access_token as string
 
     const response = await fetch("https://api.intra.42.fr/v2/me", {
@@ -108,3 +113,38 @@ export class Handle42CallbackUseCase {
     }
   }
 }
+
+export function mapIntraTokenExchangeError(error: unknown): ApplicationError {
+  if (error instanceof ApplicationError) return error
+
+  const err = error as {
+    data?: { payload?: { error?: string; error_description?: string }; statusCode?: number }
+    output?: { payload?: { error?: string; error_description?: string }; statusCode?: number }
+    message?: string
+  }
+
+  const oauthError = err.data?.payload?.error || err.output?.payload?.error
+  const description =
+    err.data?.payload?.error_description || err.output?.payload?.error_description
+
+  if (oauthError === "invalid_client") {
+    return new ApplicationError(
+      "Autenticação Intra falhou: cliente OAuth inválido. Verifique FORTYTWO_CLIENT_ID e FORTYTWO_CLIENT_SECRET no ambiente.",
+      502,
+    )
+  }
+
+  if (oauthError === "invalid_grant") {
+    return new ApplicationError(
+      "Código Intra inválido ou já usado. Inicie o login novamente.",
+      401,
+    )
+  }
+
+  if (description) {
+    return new ApplicationError(`Falha na autenticação Intra: ${description}`, 502)
+  }
+
+  return new ApplicationError("Falha na autenticação Intra. Tente novamente.", 502)
+}
+
