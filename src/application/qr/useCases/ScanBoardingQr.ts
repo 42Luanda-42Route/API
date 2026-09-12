@@ -1,13 +1,14 @@
 import { CadeteRepository } from "../../../domain/cadetes/CadeteRepository"
+import { BoardingRequestRepository } from "../../../domain/boarding/BoardingRequestRepository"
 import { ApplicationError } from "../../errors/ApplicationError"
 import { decryptQrPayload } from "../../../utils/qrCipher"
 import { BoardingEligibilityResult, BoardingQrPayload, ScanBoardingQrInput } from "../dto"
 
-// Cadete escaneia o QR dinâmico do motorista. Elegível apenas se:
-// 1) o token pertence de facto a um cadete, 2) o QR ainda não expirou (TTL curto),
-// 3) a rota do motorista no QR corresponde à rota da paragem atribuída ao cadete na BD.
 export class ScanBoardingQrUseCase {
-  constructor(private readonly cadetes: CadeteRepository) {}
+  constructor(
+    private readonly cadetes: CadeteRepository,
+    private readonly boardingRequests: BoardingRequestRepository,
+  ) {}
 
   async execute(input: ScanBoardingQrInput): Promise<BoardingEligibilityResult> {
     if (input.role !== "CADETE") {
@@ -31,6 +32,8 @@ export class ScanBoardingQrUseCase {
     if (now > payload.exp) {
       return {
         eligible: false,
+        pending: false,
+        flagged: false,
         reason: "QR code expirado, peça ao motorista para gerar um novo",
         cadete: { id: input.cadeteId, fullName: routeInfo.full_name ?? null },
       }
@@ -39,11 +42,42 @@ export class ScanBoardingQrUseCase {
     const cadeteRouteId: number | null = routeInfo.stop?.route?.id ?? null
     const eligible = cadeteRouteId !== null && cadeteRouteId === payload.routeId
 
+    if (!eligible) {
+      return {
+        eligible: false,
+        pending: false,
+        flagged: false,
+        reason: "Este cadete não está atribuído à rota deste motorista",
+        cadete: { id: input.cadeteId, fullName: routeInfo.full_name ?? null },
+        route: routeInfo.stop?.route
+          ? { id: routeInfo.stop.route.id, routeName: routeInfo.stop.route.route_name }
+          : undefined,
+      }
+    }
+
+    let request = await this.boardingRequests.findPending(
+      input.cadeteId,
+      payload.driverId,
+      payload.routeId,
+    )
+    if (!request) {
+      request = await this.boardingRequests.createPending({
+        cadeteId: input.cadeteId,
+        driverId: payload.driverId,
+        routeId: payload.routeId,
+      })
+    }
+
     return {
-      eligible,
-      reason: eligible ? undefined : "Este cadete não está atribuído à rota deste motorista",
+      eligible: true,
+      pending: true,
+      flagged: request.flagged,
+      requestId: request.id,
+      reason: "Pedido enviado ao motorista — aguarda aprovação",
       cadete: { id: input.cadeteId, fullName: routeInfo.full_name ?? null },
-      route: routeInfo.stop?.route ? { id: routeInfo.stop.route.id, routeName: routeInfo.stop.route.route_name } : undefined,
+      route: routeInfo.stop?.route
+        ? { id: routeInfo.stop.route.id, routeName: routeInfo.stop.route.route_name }
+        : undefined,
     }
   }
 
@@ -62,7 +96,7 @@ export class ScanBoardingQrUseCase {
       throw new ApplicationError("QR code inválido ou corrompido", 422)
     }
 
-    if (payload.type !== "boarding" || !payload.routeId || !payload.exp) {
+    if (payload.type !== "boarding" || !payload.routeId || !payload.driverId || !payload.exp) {
       throw new ApplicationError("QR code não corresponde a um embarque válido", 422)
     }
 
