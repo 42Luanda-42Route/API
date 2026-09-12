@@ -1,6 +1,6 @@
 import { ApplicationError } from "../../errors/ApplicationError"
 import { BoardingRequestRepository } from "../../../domain/boarding/BoardingRequestRepository"
-import { emitToRoute } from "../../../WebSockets/socket"
+import { emitBoardingToParties } from "../../../WebSockets/socket"
 import { UpdateBoardingRequestInput } from "../dto"
 
 export class UpdateBoardingRequestUseCase {
@@ -19,7 +19,10 @@ export class UpdateBoardingRequestUseCase {
         input.driverId,
         input.status,
       )
-      emitToRoute(request.routeId, "boarding:request:updated", {
+      emitBoardingToParties(
+        { driverId: request.driverId, cadeteId: request.cadeteId, routeId: request.routeId },
+        "boarding:request:updated",
+        {
         id: request.id,
         cadeteId: request.cadeteId,
         driverId: request.driverId,
