@@ -76,6 +76,30 @@ export class BoardingRequestPrismaRepository implements BoardingRequestRepositor
     return this.map(row)
   }
 
+  async admitNow(input: {
+    cadeteId: number
+    driverId: number
+    routeId: number
+  }): Promise<BoardingRequest> {
+    const pending = await this.findPending(input.cadeteId, input.driverId, input.routeId)
+    if (pending) {
+      return this.updateStatus(pending.id, input.driverId, "APPROVED")
+    }
+    const row = await this.prisma.boardingRequest.create({
+      data: {
+        cadete_id: input.cadeteId,
+        driver_id: input.driverId,
+        route_id: input.routeId,
+        status: PrismaStatus.APPROVED,
+        flagged: false,
+      },
+      include: {
+        cadete: { select: { full_name: true, stop: { select: { stop_name: true } } } },
+      },
+    })
+    return this.map(row)
+  }
+
   private map(row: any): BoardingRequest {
     return {
       id: row.id,
