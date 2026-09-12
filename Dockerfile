@@ -24,19 +24,24 @@ ENV PORT=3000
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
-RUN npm ci --omit=dev && npx prisma generate
+# Prod deps only (prisma CLI for migrate). Client comes from builder — avoid
+# regenerating json-schema generator (devDependency) in this stage.
+RUN npm ci --omit=dev
 
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/schemas ./schemas
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \
   && addgroup -S app && adduser -S app -G app \
-  && chown -R app:app /app
+  && chown -R app:app /app \
+  && chown app:app /entrypoint.sh
 
 USER app
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3000/health || exit 1
+  CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["node", "dist/main.js"]
