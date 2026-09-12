@@ -1,4 +1,15 @@
 import { Server, Socket } from "socket.io"
+
+let ioInstance: Server | null = null
+
+export function getIO(): Server | null {
+  return ioInstance
+}
+
+export function emitToRoute(routeId: number, event: string, payload: unknown) {
+  if (!ioInstance || !routeId) return
+  ioInstance.to(`route_${routeId}`).emit(event, payload)
+}
 import { FastifyInstance } from "fastify"
 import prisma from "../infrastructure/database/prismaClient"
 import { RouteLocationState } from "../domain/routes/Route"
@@ -52,6 +63,7 @@ export function initSocket(app: FastifyInstance) {
     }
   })
 
+  ioInstance = io
   ;(app.server as any).io = io
 
   io.on("error", (error: any) => {
