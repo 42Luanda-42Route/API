@@ -10,19 +10,31 @@ export class BoardingRequestPrismaRepository implements BoardingRequestRepositor
     driverId: number
     routeId: number
   }): Promise<BoardingRequest> {
-    const row = await this.prisma.boardingRequest.create({
-      data: {
-        cadete_id: input.cadeteId,
-        driver_id: input.driverId,
-        route_id: input.routeId,
-        status: PrismaStatus.PENDING,
-        flagged: true,
-      },
-      include: {
-        cadete: { select: { full_name: true, stop: { select: { stop_name: true } } } },
-      },
-    })
-    return this.map(row)
+    const existing = await this.findPending(input.cadeteId, input.driverId, input.routeId)
+    if (existing) return existing
+
+    try {
+      const row = await this.prisma.boardingRequest.create({
+        data: {
+          cadete_id: input.cadeteId,
+          driver_id: input.driverId,
+          route_id: input.routeId,
+          status: PrismaStatus.PENDING,
+          flagged: true,
+        },
+        include: {
+          cadete: { select: { full_name: true, stop: { select: { stop_name: true } } } },
+        },
+      })
+      return this.map(row)
+    } catch (error: any) {
+      // Unique pending index race: re-read winner
+      if (error?.code === "P2002") {
+        const again = await this.findPending(input.cadeteId, input.driverId, input.routeId)
+        if (again) return again
+      }
+      throw error
+    }
   }
 
   async findPending(cadeteId: number, driverId: number, routeId: number): Promise<BoardingRequest | null> {
