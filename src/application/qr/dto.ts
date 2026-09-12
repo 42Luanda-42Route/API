@@ -24,6 +24,19 @@ export interface AdmitCadeteByQrInput {
   qr: string
 }
 
+export interface ListBoardingRequestsInput {
+  driverId: number
+  role: string
+  status?: "PENDING" | "APPROVED" | "REJECTED"
+}
+
+export interface UpdateBoardingRequestInput {
+  driverId: number
+  role: string
+  requestId: number
+  status: "APPROVED" | "REJECTED"
+}
+
 export interface RouteQrPayload {
   type: "route"
   routeId: number
@@ -47,6 +60,9 @@ export interface CadeteQrPayload {
 export interface BoardingEligibilityResult {
   eligible: boolean
   reason?: string
+  pending?: boolean
+  flagged?: boolean
+  requestId?: number
   cadete: { id: number; fullName: string | null }
   route?: { id: number; routeName: string }
 }
