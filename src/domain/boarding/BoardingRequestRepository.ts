@@ -9,4 +9,10 @@ export interface BoardingRequestRepository {
   findPending(cadeteId: number, driverId: number, routeId: number): Promise<BoardingRequest | null>
   listForDriver(driverId: number, status?: BoardingRequestStatus): Promise<BoardingRequest[]>
   updateStatus(id: number, driverId: number, status: BoardingRequestStatus): Promise<BoardingRequest>
+  /** Driver scanned cadete: approve existing pending or create APPROVED row */
+  admitNow(input: {
+    cadeteId: number
+    driverId: number
+    routeId: number
+  }): Promise<BoardingRequest>
 }
