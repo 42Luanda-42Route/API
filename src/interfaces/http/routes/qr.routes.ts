@@ -7,6 +7,8 @@ import { AssignRouteUseCase } from "../../../application/drivers/useCases/Assign
 import { ScanRouteQrUseCase } from "../../../application/qr/useCases/ScanRouteQr"
 import { GenerateBoardingQrUseCase } from "../../../application/qr/useCases/GenerateBoardingQr"
 import { ScanBoardingQrUseCase } from "../../../application/qr/useCases/ScanBoardingQr"
+import { GenerateCadeteQrUseCase } from "../../../application/qr/useCases/GenerateCadeteQr"
+import { AdmitCadeteByQrUseCase } from "../../../application/qr/useCases/AdmitCadeteByQr"
 
 export default async function qrRoutes(app: FastifyInstance) {
   const driverRepo = new DriverPrismaRepository(app.prisma)
@@ -17,6 +19,8 @@ export default async function qrRoutes(app: FastifyInstance) {
     new ScanRouteQrUseCase(new AssignRouteUseCase(driverRepo, routeRepo)),
     new GenerateBoardingQrUseCase(driverRepo),
     new ScanBoardingQrUseCase(cadeteRepo),
+    new GenerateCadeteQrUseCase(cadeteRepo),
+    new AdmitCadeteByQrUseCase(driverRepo, cadeteRepo),
   )
 
   app.post(
@@ -26,7 +30,8 @@ export default async function qrRoutes(app: FastifyInstance) {
       schema: {
         tags: ["QR"],
         summary: "Motorista escaneia QR de rota",
-        description: "Decifra o QR físico (AES-ECB) já afixado na viatura/paragem e associa o motorista autenticado à rota codificada nele.",
+        description:
+          "Decifra o QR físico (AES-ECB) já afixado na viatura/paragem e associa o motorista autenticado à rota codificada nele.",
         security: [{ bearerAuth: [] }],
         body: {
           type: "object",
@@ -39,7 +44,11 @@ export default async function qrRoutes(app: FastifyInstance) {
           200: { description: "Motorista associado à rota", type: "object" },
           401: { description: "Não autorizado", type: "object", properties: { error: { type: "string" } } },
           404: { description: "Rota não encontrada", type: "object", properties: { error: { type: "string" } } },
-          422: { description: "QR inválido, corrompido ou de tipo incorreto", type: "object", properties: { error: { type: "string" } } },
+          422: {
+            description: "QR inválido, corrompido ou de tipo incorreto",
+            type: "object",
+            properties: { error: { type: "string" } },
+          },
         },
       },
     },
@@ -53,7 +62,8 @@ export default async function qrRoutes(app: FastifyInstance) {
       schema: {
         tags: ["QR"],
         summary: "Motorista gera QR dinâmico de embarque",
-        description: "Gera um QR cifrado de curta duração (TTL configurável) com a rota atual do motorista, para exibição em ecrã e validação de presença dos cadetes.",
+        description:
+          "Gera um QR cifrado de curta duração (TTL configurável) com a rota atual do motorista, para exibição em ecrã e validação de presença dos cadetes.",
         security: [{ bearerAuth: [] }],
         response: {
           200: {
@@ -80,7 +90,8 @@ export default async function qrRoutes(app: FastifyInstance) {
       schema: {
         tags: ["QR"],
         summary: "Cadete escaneia QR de embarque e valida elegibilidade",
-        description: "Decifra o QR dinâmico mostrado pelo motorista e verifica se o cadete autenticado está atribuído à rota correspondente, sem QR expirado.",
+        description:
+          "Decifra o QR dinâmico mostrado pelo motorista e verifica se o cadete autenticado está atribuído à rota correspondente, sem QR expirado.",
         security: [{ bearerAuth: [] }],
         body: {
           type: "object",
@@ -101,11 +112,98 @@ export default async function qrRoutes(app: FastifyInstance) {
             },
           },
           401: { description: "Não autorizado", type: "object", properties: { error: { type: "string" } } },
-          403: { description: "Utilizador autenticado não é cadete", type: "object", properties: { error: { type: "string" } } },
-          422: { description: "QR inválido, corrompido ou de tipo incorreto", type: "object", properties: { error: { type: "string" } } },
+          403: {
+            description: "Utilizador autenticado não é cadete",
+            type: "object",
+            properties: { error: { type: "string" } },
+          },
+          422: {
+            description: "QR inválido, corrompido ou de tipo incorreto",
+            type: "object",
+            properties: { error: { type: "string" } },
+          },
         },
       },
     },
     async (req, reply) => controller.scanBoarding(req as any, reply),
+  )
+
+  app.post(
+    "/qr/cadete/generate",
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        tags: ["QR"],
+        summary: "Cadete gera QR de identificação",
+        description:
+          "Gera um QR cifrado de curta duração com o id do cadete, para o motorista escanear e admitir na viagem.",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            description: "QR do cadete gerado",
+            type: "object",
+            properties: {
+              qr: { type: "string" },
+              expiresAt: { type: "string" },
+              cadeteId: { type: "integer" },
+            },
+          },
+          401: { description: "Não autorizado", type: "object", properties: { error: { type: "string" } } },
+          403: {
+            description: "Utilizador autenticado não é cadete",
+            type: "object",
+            properties: { error: { type: "string" } },
+          },
+        },
+      },
+    },
+    async (req, reply) => controller.generateCadete(req as any, reply),
+  )
+
+  app.post(
+    "/qr/boarding/admit",
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        tags: ["QR"],
+        summary: "Motorista escaneia QR do cadete e admite na rota",
+        description:
+          "Decifra o QR do cadete e verifica se a rota da paragem do cadete coincide com a rota actual do motorista. Não persiste presença (schema sem tabela de attendance).",
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["qr"],
+          properties: {
+            qr: { type: "string", description: "Conteúdo bruto (Base64) lido do QR do cadete" },
+          },
+        },
+        response: {
+          200: {
+            description: "Resultado da admissão",
+            type: "object",
+            properties: {
+              admitted: { type: "boolean" },
+              reason: { type: "string" },
+              cadete: { type: "object" },
+              route: { type: "object" },
+              driver: { type: "object" },
+            },
+          },
+          401: { description: "Não autorizado", type: "object", properties: { error: { type: "string" } } },
+          403: {
+            description: "Utilizador autenticado não é motorista",
+            type: "object",
+            properties: { error: { type: "string" } },
+          },
+          409: { description: "Motorista sem rota atribuída", type: "object", properties: { error: { type: "string" } } },
+          422: {
+            description: "QR inválido, corrompido ou de tipo incorreto",
+            type: "object",
+            properties: { error: { type: "string" } },
+          },
+        },
+      },
+    },
+    async (req, reply) => controller.admitCadete(req as any, reply),
   )
 }
