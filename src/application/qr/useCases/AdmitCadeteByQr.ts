@@ -1,6 +1,6 @@
 import { ApplicationError } from "../../errors/ApplicationError"
 import { decryptQrPayload } from "../../../utils/qrCipher"
-import { emitToRoute } from "../../../WebSockets/socket"
+import { emitBoardingToParties } from "../../../WebSockets/socket"
 import { AdmitCadeteByQrInput, AdmitCadeteResult, CadeteQrPayload } from "../dto"
 import { CadeteRepository } from "../../../domain/cadetes/CadeteRepository"
 import { DriverRepository } from "../../../domain/drivers/DriverRepository"
@@ -73,7 +73,10 @@ export class AdmitCadeteByQrUseCase {
       routeId: driver.currentRouteId,
     })
 
-    emitToRoute(driver.currentRouteId, "boarding:request:updated", {
+    emitBoardingToParties(
+      { driverId: driver.id, cadeteId: payload.cadeteId, routeId: driver.currentRouteId },
+      "boarding:request:updated",
+      {
       id: request.id,
       cadeteId: request.cadeteId,
       driverId: request.driverId,
