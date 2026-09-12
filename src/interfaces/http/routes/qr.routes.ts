@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify"
 import { DriverPrismaRepository } from "../../../infrastructure/repositories/DriverPrismaRepository"
 import { RoutePrismaRepository } from "../../../infrastructure/repositories/RoutePrismaRepository"
 import { CadetePrismaRepository } from "../../../infrastructure/repositories/CadetePrismaRepository"
+import { BoardingRequestPrismaRepository } from "../../../infrastructure/repositories/BoardingRequestPrismaRepository"
 import { QrController } from "../controllers/QrController"
 import { AssignRouteUseCase } from "../../../application/drivers/useCases/AssignRoute"
 import { ScanRouteQrUseCase } from "../../../application/qr/useCases/ScanRouteQr"
@@ -9,201 +10,30 @@ import { GenerateBoardingQrUseCase } from "../../../application/qr/useCases/Gene
 import { ScanBoardingQrUseCase } from "../../../application/qr/useCases/ScanBoardingQr"
 import { GenerateCadeteQrUseCase } from "../../../application/qr/useCases/GenerateCadeteQr"
 import { AdmitCadeteByQrUseCase } from "../../../application/qr/useCases/AdmitCadeteByQr"
+import { ListBoardingRequestsUseCase } from "../../../application/qr/useCases/ListBoardingRequests"
+import { UpdateBoardingRequestUseCase } from "../../../application/qr/useCases/UpdateBoardingRequest"
 
 export default async function qrRoutes(app: FastifyInstance) {
   const driverRepo = new DriverPrismaRepository(app.prisma)
   const routeRepo = new RoutePrismaRepository(app.prisma)
   const cadeteRepo = new CadetePrismaRepository(app.prisma)
+  const boardingRepo = new BoardingRequestPrismaRepository(app.prisma)
 
   const controller = new QrController(
     new ScanRouteQrUseCase(new AssignRouteUseCase(driverRepo, routeRepo)),
     new GenerateBoardingQrUseCase(driverRepo),
-    new ScanBoardingQrUseCase(cadeteRepo),
+    new ScanBoardingQrUseCase(cadeteRepo, boardingRepo),
     new GenerateCadeteQrUseCase(cadeteRepo),
     new AdmitCadeteByQrUseCase(driverRepo, cadeteRepo),
+    new ListBoardingRequestsUseCase(boardingRepo),
+    new UpdateBoardingRequestUseCase(boardingRepo),
   )
 
-  app.post(
-    "/qr/route/scan",
-    {
-      preHandler: [app.authenticate],
-      schema: {
-        tags: ["QR"],
-        summary: "Motorista escaneia QR de rota",
-        description:
-          "Decifra o QR físico (AES-ECB) já afixado na viatura/paragem e associa o motorista autenticado à rota codificada nele.",
-        security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["qr"],
-          properties: {
-            qr: { type: "string", description: "Conteúdo bruto (Base64) lido do QR code" },
-          },
-        },
-        response: {
-          200: { description: "Motorista associado à rota", type: "object" },
-          401: { description: "Não autorizado", type: "object", properties: { error: { type: "string" } } },
-          404: { description: "Rota não encontrada", type: "object", properties: { error: { type: "string" } } },
-          422: {
-            description: "QR inválido, corrompido ou de tipo incorreto",
-            type: "object",
-            properties: { error: { type: "string" } },
-          },
-        },
-      },
-    },
-    async (req, reply) => controller.scanRoute(req as any, reply),
-  )
-
-  app.post(
-    "/qr/boarding/generate",
-    {
-      preHandler: [app.authenticate],
-      schema: {
-        tags: ["QR"],
-        summary: "Motorista gera QR dinâmico de embarque",
-        description:
-          "Gera um QR cifrado de curta duração (TTL configurável) com a rota atual do motorista, para exibição em ecrã e validação de presença dos cadetes.",
-        security: [{ bearerAuth: [] }],
-        response: {
-          200: {
-            description: "QR de embarque gerado",
-            type: "object",
-            properties: {
-              qr: { type: "string" },
-              expiresAt: { type: "string" },
-              routeId: { type: "integer" },
-            },
-          },
-          401: { description: "Não autorizado", type: "object", properties: { error: { type: "string" } } },
-          409: { description: "Motorista sem rota atribuída", type: "object", properties: { error: { type: "string" } } },
-        },
-      },
-    },
-    async (req, reply) => controller.generateBoarding(req as any, reply),
-  )
-
-  app.post(
-    "/qr/boarding/scan",
-    {
-      preHandler: [app.authenticate],
-      schema: {
-        tags: ["QR"],
-        summary: "Cadete escaneia QR de embarque e valida elegibilidade",
-        description:
-          "Decifra o QR dinâmico mostrado pelo motorista e verifica se o cadete autenticado está atribuído à rota correspondente, sem QR expirado.",
-        security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["qr"],
-          properties: {
-            qr: { type: "string", description: "Conteúdo bruto (Base64) lido do QR code" },
-          },
-        },
-        response: {
-          200: {
-            description: "Resultado da validação de elegibilidade",
-            type: "object",
-            properties: {
-              eligible: { type: "boolean" },
-              reason: { type: "string" },
-              cadete: { type: "object" },
-              route: { type: "object" },
-            },
-          },
-          401: { description: "Não autorizado", type: "object", properties: { error: { type: "string" } } },
-          403: {
-            description: "Utilizador autenticado não é cadete",
-            type: "object",
-            properties: { error: { type: "string" } },
-          },
-          422: {
-            description: "QR inválido, corrompido ou de tipo incorreto",
-            type: "object",
-            properties: { error: { type: "string" } },
-          },
-        },
-      },
-    },
-    async (req, reply) => controller.scanBoarding(req as any, reply),
-  )
-
-  app.post(
-    "/qr/cadete/generate",
-    {
-      preHandler: [app.authenticate],
-      schema: {
-        tags: ["QR"],
-        summary: "Cadete gera QR de identificação",
-        description:
-          "Gera um QR cifrado de curta duração com o id do cadete, para o motorista escanear e admitir na viagem.",
-        security: [{ bearerAuth: [] }],
-        response: {
-          200: {
-            description: "QR do cadete gerado",
-            type: "object",
-            properties: {
-              qr: { type: "string" },
-              expiresAt: { type: "string" },
-              cadeteId: { type: "integer" },
-            },
-          },
-          401: { description: "Não autorizado", type: "object", properties: { error: { type: "string" } } },
-          403: {
-            description: "Utilizador autenticado não é cadete",
-            type: "object",
-            properties: { error: { type: "string" } },
-          },
-        },
-      },
-    },
-    async (req, reply) => controller.generateCadete(req as any, reply),
-  )
-
-  app.post(
-    "/qr/boarding/admit",
-    {
-      preHandler: [app.authenticate],
-      schema: {
-        tags: ["QR"],
-        summary: "Motorista escaneia QR do cadete e admite na rota",
-        description:
-          "Decifra o QR do cadete e verifica se a rota da paragem do cadete coincide com a rota actual do motorista. Não persiste presença (schema sem tabela de attendance).",
-        security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["qr"],
-          properties: {
-            qr: { type: "string", description: "Conteúdo bruto (Base64) lido do QR do cadete" },
-          },
-        },
-        response: {
-          200: {
-            description: "Resultado da admissão",
-            type: "object",
-            properties: {
-              admitted: { type: "boolean" },
-              reason: { type: "string" },
-              cadete: { type: "object" },
-              route: { type: "object" },
-              driver: { type: "object" },
-            },
-          },
-          401: { description: "Não autorizado", type: "object", properties: { error: { type: "string" } } },
-          403: {
-            description: "Utilizador autenticado não é motorista",
-            type: "object",
-            properties: { error: { type: "string" } },
-          },
-          409: { description: "Motorista sem rota atribuída", type: "object", properties: { error: { type: "string" } } },
-          422: {
-            description: "QR inválido, corrompido ou de tipo incorreto",
-            type: "object",
-            properties: { error: { type: "string" } },
-          },
-        },
-      },
-    },
-    async (req, reply) => controller.admitCadete(req as any, reply),
-  )
+  app.post("/qr/route/scan", { preHandler: [app.authenticate], schema: { tags: ["QR"], summary: "Motorista escaneia QR de rota", security: [{ bearerAuth: [] }], body: { type: "object", required: ["qr"], properties: { qr: { type: "string" } } } } }, async (req, reply) => controller.scanRoute(req as any, reply))
+  app.post("/qr/boarding/generate", { preHandler: [app.authenticate], schema: { tags: ["QR"], summary: "Motorista gera QR dinâmico de embarque", security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.generateBoarding(req as any, reply))
+  app.post("/qr/boarding/scan", { preHandler: [app.authenticate], schema: { tags: ["QR"], summary: "Cadete escaneia QR — cria pedido pendente para o motorista", security: [{ bearerAuth: [] }], body: { type: "object", required: ["qr"], properties: { qr: { type: "string" } } } } }, async (req, reply) => controller.scanBoarding(req as any, reply))
+  app.post("/qr/cadete/generate", { preHandler: [app.authenticate], schema: { tags: ["QR"], summary: "Cadete gera QR de identificação", security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.generateCadete(req as any, reply))
+  app.post("/qr/boarding/admit", { preHandler: [app.authenticate], schema: { tags: ["QR"], summary: "Motorista escaneia QR do cadete", security: [{ bearerAuth: [] }], body: { type: "object", required: ["qr"], properties: { qr: { type: "string" } } } } }, async (req, reply) => controller.admitCadete(req as any, reply))
+  app.get("/qr/boarding/requests", { preHandler: [app.authenticate], schema: { tags: ["QR"], summary: "Motorista lista pedidos de embarque (flag/pending)", security: [{ bearerAuth: [] }], querystring: { type: "object", properties: { status: { type: "string", enum: ["PENDING", "APPROVED", "REJECTED"] } } } } }, async (req, reply) => controller.listRequests(req as any, reply))
+  app.patch("/qr/boarding/requests/:id", { preHandler: [app.authenticate], schema: { tags: ["QR"], summary: "Motorista aprova ou rejeita pedido", security: [{ bearerAuth: [] }], params: { type: "object", required: ["id"], properties: { id: { type: "string" } } }, body: { type: "object", required: ["status"], properties: { status: { type: "string", enum: ["APPROVED", "REJECTED"] } } } } }, async (req, reply) => controller.updateRequest(req as any, reply))
 }
