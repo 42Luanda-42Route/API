@@ -2,7 +2,7 @@ import { CadeteRepository } from "../../../domain/cadetes/CadeteRepository"
 import { BoardingRequestRepository } from "../../../domain/boarding/BoardingRequestRepository"
 import { ApplicationError } from "../../errors/ApplicationError"
 import { decryptQrPayload } from "../../../utils/qrCipher"
-import { emitToRoute } from "../../../WebSockets/socket"
+import { emitBoardingToParties } from "../../../WebSockets/socket"
 import { BoardingEligibilityResult, BoardingQrPayload, ScanBoardingQrInput } from "../dto"
 
 function serializeRequest(r: {
@@ -95,7 +95,11 @@ export class ScanBoardingQrUseCase {
       })
     }
 
-    emitToRoute(payload.routeId, "boarding:request", serializeRequest(request))
+    emitBoardingToParties(
+      { driverId: payload.driverId, cadeteId: input.cadeteId, routeId: payload.routeId },
+      "boarding:request",
+      serializeRequest(request),
+    )
 
     return {
       eligible: true,
