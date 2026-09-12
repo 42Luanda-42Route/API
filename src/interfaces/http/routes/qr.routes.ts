@@ -24,7 +24,7 @@ export default async function qrRoutes(app: FastifyInstance) {
     new GenerateBoardingQrUseCase(driverRepo),
     new ScanBoardingQrUseCase(cadeteRepo, boardingRepo),
     new GenerateCadeteQrUseCase(cadeteRepo),
-    new AdmitCadeteByQrUseCase(driverRepo, cadeteRepo),
+    new AdmitCadeteByQrUseCase(driverRepo, cadeteRepo, boardingRepo),
     new ListBoardingRequestsUseCase(boardingRepo),
     new UpdateBoardingRequestUseCase(boardingRepo),
   )
