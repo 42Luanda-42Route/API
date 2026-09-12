@@ -2,7 +2,34 @@ import { CadeteRepository } from "../../../domain/cadetes/CadeteRepository"
 import { BoardingRequestRepository } from "../../../domain/boarding/BoardingRequestRepository"
 import { ApplicationError } from "../../errors/ApplicationError"
 import { decryptQrPayload } from "../../../utils/qrCipher"
+import { emitToRoute } from "../../../WebSockets/socket"
 import { BoardingEligibilityResult, BoardingQrPayload, ScanBoardingQrInput } from "../dto"
+
+function serializeRequest(r: {
+  id: number
+  cadeteId: number
+  driverId: number
+  routeId: number
+  status: string
+  flagged: boolean
+  createdAt: Date
+  updatedAt: Date
+  cadeteName?: string | null
+  stopName?: string | null
+}) {
+  return {
+    id: r.id,
+    cadeteId: r.cadeteId,
+    driverId: r.driverId,
+    routeId: r.routeId,
+    status: r.status,
+    flagged: r.flagged,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+    cadeteName: r.cadeteName ?? null,
+    stopName: r.stopName ?? null,
+  }
+}
 
 export class ScanBoardingQrUseCase {
   constructor(
@@ -22,7 +49,6 @@ export class ScanBoardingQrUseCase {
     }
 
     const payload = this.decode(input.qr)
-
     const routeInfo = await this.cadetes.getRouteInfo(input.cadeteId)
     if (!routeInfo) {
       throw new ApplicationError("Cadete não encontrado", 404)
@@ -60,6 +86,7 @@ export class ScanBoardingQrUseCase {
       payload.driverId,
       payload.routeId,
     )
+    const created = !request
     if (!request) {
       request = await this.boardingRequests.createPending({
         cadeteId: input.cadeteId,
@@ -68,12 +95,16 @@ export class ScanBoardingQrUseCase {
       })
     }
 
+    emitToRoute(payload.routeId, "boarding:request", serializeRequest(request))
+
     return {
       eligible: true,
       pending: true,
       flagged: request.flagged,
       requestId: request.id,
-      reason: "Pedido enviado ao motorista — aguarda aprovação",
+      reason: created
+        ? "Pedido enviado ao motorista — aguarda aprovação"
+        : "Já existe um pedido pendente para este motorista",
       cadete: { id: input.cadeteId, fullName: routeInfo.full_name ?? null },
       route: routeInfo.stop?.route
         ? { id: routeInfo.stop.route.id, routeName: routeInfo.stop.route.route_name }
@@ -88,18 +119,15 @@ export class ScanBoardingQrUseCase {
     } catch {
       throw new ApplicationError("QR code inválido ou corrompido", 422)
     }
-
     let payload: BoardingQrPayload
     try {
       payload = JSON.parse(raw)
     } catch {
       throw new ApplicationError("QR code inválido ou corrompido", 422)
     }
-
     if (payload.type !== "boarding" || !payload.routeId || !payload.driverId || !payload.exp) {
       throw new ApplicationError("QR code não corresponde a um embarque válido", 422)
     }
-
     return payload
   }
 }
