@@ -32,6 +32,7 @@ model Cadetes {
   phone        Int?
   stop_id      Int?
   stop         MiniBusStop? @relation(fields: [stop_id], references: [id], onDelete: SetNull)
+  boardingRequests BoardingRequest[]
   createdAt    DateTime     @default(now())
 }
 
@@ -44,6 +45,7 @@ model Drivers {
   photo       String?
   phone       Int?
   coordinates DriverCoordinates[]
+  boardingRequests BoardingRequest[]
 
   // Rota atual do motorista
   current_route_id Int?
@@ -81,6 +83,7 @@ model Route {
 
   //Motoristas podem estar temporariamente nesta rota
   drivers Drivers[]
+  boardingRequests BoardingRequest[]
 }
 
 model Message {
@@ -123,4 +126,30 @@ model DriverCoordinates {
   id_driver Int      @unique
   createdAt DateTime @default(now())
   driver    Drivers  @relation(fields: [id_driver], references: [id], onDelete: Cascade)
+}
+
+
+enum BoardingRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model BoardingRequest {
+  id        Int                  @id @default(autoincrement())
+  cadete_id Int
+  driver_id Int
+  route_id  Int
+  status    BoardingRequestStatus @default(PENDING)
+  flagged   Boolean              @default(true)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  cadete Cadetes @relation(fields: [cadete_id], references: [id], onDelete: Cascade)
+  driver Drivers @relation(fields: [driver_id], references: [id], onDelete: Cascade)
+  route  Route   @relation(fields: [route_id], references: [id], onDelete: Cascade)
+
+  @@index([driver_id, status])
+  @@index([route_id, status])
+  @@index([cadete_id, status])
 }
