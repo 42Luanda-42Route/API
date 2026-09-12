@@ -10,6 +10,25 @@ export function emitToRoute(routeId: number, event: string, payload: unknown) {
   if (!ioInstance || !routeId) return
   ioInstance.to(`route_${routeId}`).emit(event, payload)
 }
+
+export function emitToDriver(driverId: number, event: string, payload: unknown) {
+  if (!ioInstance || !driverId) return
+  ioInstance.to(`driver_${driverId}`).emit(event, payload)
+}
+
+export function emitToCadete(cadeteId: number, event: string, payload: unknown) {
+  if (!ioInstance || !cadeteId) return
+  ioInstance.to(`cadete_${cadeteId}`).emit(event, payload)
+}
+
+export function emitBoardingToParties(
+  input: { driverId: number; cadeteId: number; routeId?: number },
+  event: string,
+  payload: unknown,
+) {
+  emitToDriver(input.driverId, event, payload)
+  emitToCadete(input.cadeteId, event, payload)
+}
 import { FastifyInstance } from "fastify"
 import prisma from "../infrastructure/database/prismaClient"
 import { RouteLocationState } from "../domain/routes/Route"
@@ -92,6 +111,7 @@ export function initSocket(app: FastifyInstance) {
 
         const room = `route_${driver.current_route_id}`
         socket.join(room)
+        socket.join(`driver_${driverId}`)
       } catch (err) {
         socket.emit("socket:error", { event: "driver:joinRoute", message: "Failed to join route" })
       }
@@ -153,6 +173,8 @@ export function initSocket(app: FastifyInstance) {
 
         const room = `route_${effectiveRouteId}`
         socket.join(room)
+        if (data.cadeteId) socket.join(`cadete_${data.cadeteId}`)
+        else if ((socket as any).user?.id && String((socket as any).user?.role).toUpperCase() === "CADETE") socket.join(`cadete_${(socket as any).user.id}`)
 
         // Apenas envia a localização ao vivo se o motorista estiver REALMENTE ativo no momento
         if (isDriverActive(effectiveRouteId)) {
