@@ -45,6 +45,7 @@ A aplicação adota os princípios de **Clean Architecture**, garantindo que as 
 - 🚏 **Gestão de Rotas e Paragens**:
   - CRUD completo para rotas, paragens com coordenadas geográficas (latitude/longitude) e cadetes associados.
 - 🛡️ **Segurança e Confiabilidade**:
+  - Mutations administrativas protegidas por RBAC (`ADMIN`) e ações de localização limitadas ao próprio motorista ou a um administrador.
   - Headers HTTP protegidos com **Helmet**.
   - Proteção contra abusos via **Rate Limiting**.
   - Validação estrita de entradas com schemas JSON.
@@ -218,7 +219,7 @@ Abaixo estão descritas as variáveis necessárias para a execução da API:
 | `PORT` | Porta onde o servidor HTTP/WebSocket escuta | `3000` |
 | `NODE_ENV` | Ambiente de execução (`development`, `production`, `test`) | `development` |
 | `APP_URL` | URL base pública da aplicação | `http://localhost:3000` |
-| `CORS_ORIGINS` | Origens permitidas no CORS (`*` ou separadas por vírgula) | `*` |
+| `CORS_ORIGINS` | Origens permitidas no CORS HTTP e Socket.IO (`*` ou separadas por vírgula; configure explicitamente em produção) | `http://localhost:3001` |
 | `JWT_SECRET` | Chave secreta usada para assinar e verificar tokens JWT | `sua_chave_secreta_aqui` |
 | `JWT_EXPIRES` | Tempo de expiração do token JWT | `1h` |
 | `FORTYTWO_CLIENT_ID` | UID / Client ID da aplicação na 42 Intra API | *(Obtido no portal da 42)* |
@@ -269,36 +270,40 @@ Todas as rotas REST possuem o prefixo base `/api`.
 ### 2. Rotas de Transporte (`/api/routes`)
 - `GET /api/routes` — Listar todas as rotas
 - `GET /api/routes/:id` — Detalhes de uma rota com suas paragens
-- `POST /api/routes` — Criar uma nova rota *(requer autenticação)*
-- `PUT /api/routes/:id` — Atualizar rota *(requer autenticação)*
-- `DELETE /api/routes/:id` — Deletar rota *(requer autenticação)*
+- `POST /api/routes` — Criar uma nova rota *(requer ADMIN)*
+- `PUT /api/routes/:id` — Atualizar nome/descrição da rota *(requer ADMIN)*
+- `DELETE /api/routes/:id` — Deletar rota *(requer ADMIN)*
+- `POST /api/routes/:id/stops` — Associar paragens existentes *(requer ADMIN)*
 
 ### 3. Paragens de Candongueiro (`/api/minibusstops`)
 - `GET /api/minibusstops` — Listar todas as paragens
 - `GET /api/minibusstops/:id` — Buscar paragem por ID
-- `POST /api/minibusstops` — Criar paragem com coordenadas *(requer autenticação)*
-- `PUT /api/minibusstops/:id` — Atualizar dados da paragem *(requer autenticação)*
-- `DELETE /api/minibusstops/:id` — Remover paragem *(requer autenticação)*
+- `POST /api/minibusstops` — Criar paragem com coordenadas *(requer ADMIN)*
+- `PUT /api/minibusstops/:id` — Atualizar dados da paragem *(requer ADMIN)*
+- `DELETE /api/minibusstops/:id` — Remover paragem *(requer ADMIN)*
 
 ### 4. Motoristas (`/api/drivers`)
 - `GET /api/drivers` — Listar motoristas
 - `GET /api/drivers/:id` — Detalhes do motorista
-- `POST /api/drivers` — Cadastrar novo motorista
-- `PUT /api/drivers/:id` — Atualizar dados do motorista *(requer autenticação)*
-- `PATCH /api/drivers/:id/route` — Atribuir rota a um motorista *(requer autenticação)*
-- `DELETE /api/drivers/:id` — Excluir motorista *(requer autenticação)*
+- `POST /api/drivers` — Cadastrar novo motorista *(requer ADMIN)*
+- `PUT /api/drivers/:id` — Atualizar dados do motorista *(requer ADMIN)*
+- `POST /api/drivers/:id/assign-route` — Atribuir rota a um motorista *(requer ADMIN)*
+- `PUT /api/drivers/:id/location` — Atualizar localização *(próprio DRIVER ou ADMIN)*
+- `DELETE /api/drivers/:id/leave-route` — Sair da rota atual *(próprio DRIVER ou ADMIN)*
+- `DELETE /api/drivers/:id` — Excluir motorista *(requer ADMIN)*
 
 ### 5. Cadetes (`/api/cadetes`)
 - `GET /api/cadetes` — Listar cadetes
 - `GET /api/cadetes/:id` — Buscar cadete por ID
-- `POST /api/cadetes` — Cadastrar ou atualizar cadete
-- `PUT /api/cadetes/:id` — Atualizar dados do cadete *(requer autenticação)*
-- `DELETE /api/cadetes/:id` — Deletar cadete *(requer autenticação)*
+- `POST /api/cadetes` — Cadastrar cadete *(requer ADMIN)*
+- `PUT /api/cadetes/:id` — Atualizar dados do cadete *(requer ADMIN)*
+- `DELETE /api/cadetes/:id` — Deletar cadete *(requer ADMIN)*
 
 ### 6. Administradores (`/api/admins`)
 - `GET /api/admins` — Listar administradores *(requer autenticação)*
-- `POST /api/admins` — Criar administrador *(requer autenticação)*
-- `DELETE /api/admins/:id` — Remover administrador *(requer autenticação)*
+- `POST /api/admins` — Criar administrador *(requer ADMIN)*
+- `PUT /api/admins/:id` — Atualizar administrador *(requer ADMIN)*
+- `DELETE /api/admins/:id` — Remover administrador *(requer ADMIN)*
 
 ### 7. Saúde do Sistema (`/api/health`)
 - `GET /api/health` — Verifica status da API e conectividade com o PostgreSQL
@@ -320,11 +325,13 @@ const socket = io("http://localhost:3000", {
 ```
 
 ### Eventos do Cliente para o Servidor (Emitidos pelo App / Frontend):
-- `driver:joinRoute` — `{ driverId: number }`: Motorista entra na sala de sua rota atribuída.
-- `driver:leaveRoute` — `{ driverId: number }`: Motorista sai da sala e notifica inatividade.
-- `driver:updateLocation` — `{ id_driver: number, lat: number, long: number }`: Atualiza coordenadas do motorista.
+- `driver:joinRoute` — `{ driverId: number }`: Motorista entra na sala de sua rota atribuída; `DRIVER` só pode usar o próprio ID, enquanto `ADMIN` pode operar qualquer motorista.
+- `driver:leaveRoute` — `{ driverId: number }`: Motorista sai da sala e emite `driver:inactive`, com a mesma regra de identidade.
+- `driver:updateLocation` — `{ id_driver: number, lat: number, long: number }`: Atualiza coordenadas; `DRIVER` só pode atualizar a si mesmo, enquanto `ADMIN` pode atualizar qualquer motorista.
 - `cadete:joinRoute` — `{ cadeteId?: number, routeId?: number }`: Cadete junta-se à sala da rota.
 - `cadete:updateLocation` — `{ cadeteId: number, lat: number, long: number }`: Atualiza coordenadas caso o motorista esteja inativo.
+- `route:subscribe` — `{ routeId: number }`: `ADMIN` entra explicitamente na sala de uma rota; confirma com `route:subscribed`.
+- `route:unsubscribe` — `{ routeId: number }`: `ADMIN` sai explicitamente da sala; confirma com `route:unsubscribed`.
 
 ### Eventos do Servidor para o Cliente (Ouvidos pelo App / Frontend):
 - `driver:location` — Dados de localização em tempo real do motorista.

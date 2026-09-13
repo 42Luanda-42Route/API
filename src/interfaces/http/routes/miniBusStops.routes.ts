@@ -114,7 +114,7 @@ export default async function minibusstopsRoutes(app: FastifyInstance) {
   app.post(
     "/minibusstops",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["MiniBusStops"],
         summary: "Criar nova paragem",
@@ -167,12 +167,12 @@ export default async function minibusstopsRoutes(app: FastifyInstance) {
     async (req, reply) => controller.create(req as any, reply),
   )
 
-  app.post("/minibusstop", { preHandler: [app.authenticate], schema: { tags: ["MiniBusStops"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.create(req as any, reply))
+  app.post("/minibusstop", { preHandler: [app.authorizeRoles("ADMIN")], schema: { tags: ["MiniBusStops"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.create(req as any, reply))
 
   app.put(
     "/minibusstops/:id",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["MiniBusStops"],
         summary: "Atualizar paragem",
@@ -231,12 +231,12 @@ export default async function minibusstopsRoutes(app: FastifyInstance) {
     async (req, reply) => controller.update(req as any, reply),
   )
 
-  app.put("/minibusstop/:id", { preHandler: [app.authenticate], schema: { tags: ["MiniBusStops"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.update(req as any, reply))
+  app.put("/minibusstop/:id", { preHandler: [app.authorizeRoles("ADMIN")], schema: { tags: ["MiniBusStops"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.update(req as any, reply))
 
   app.delete(
     "/minibusstops/:id",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["MiniBusStops"],
         summary: "Eliminar paragem",
@@ -274,5 +274,5 @@ export default async function minibusstopsRoutes(app: FastifyInstance) {
     async (req, reply) => controller.delete(req as any, reply),
   )
 
-  app.delete("/minibusstop/:id", { preHandler: [app.authenticate], schema: { tags: ["MiniBusStops"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.delete(req as any, reply))
+  app.delete("/minibusstop/:id", { preHandler: [app.authorizeRoles("ADMIN")], schema: { tags: ["MiniBusStops"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.delete(req as any, reply))
 }

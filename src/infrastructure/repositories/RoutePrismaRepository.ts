@@ -20,6 +20,29 @@ export class RoutePrismaRepository implements RouteRepository {
     }
   }
 
+  async update(id: number, data: { routeName?: string; description?: string | null }): Promise<Route> {
+    try {
+      const route = await this.prisma.route.update({
+        where: { id },
+        data: {
+          route_name: data.routeName,
+          description: data.description,
+        },
+      })
+      return this.mapRoute(route)
+    } catch (error) {
+      handlePrismaError(error)
+    }
+  }
+
+  async delete(id: number): Promise<void> {
+    try {
+      await this.prisma.route.delete({ where: { id } })
+    } catch (error) {
+      handlePrismaError(error)
+    }
+  }
+
   async addStops(routeId: number, stopIds: number[]): Promise<RouteWithRelations | null> {
     await this.prisma.miniBusStop.updateMany({
       where: { id: { in: stopIds } },

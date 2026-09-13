@@ -200,7 +200,7 @@ export default async function cadeteRoutes(app: FastifyInstance) {
   app.post(
     "/cadetes",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Cadetes"],
         summary: "Criar novo cadete",
@@ -266,7 +266,7 @@ export default async function cadeteRoutes(app: FastifyInstance) {
   app.put(
     "/cadetes/:id",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Cadetes"],
         summary: "Atualizar cadete",
@@ -332,7 +332,7 @@ export default async function cadeteRoutes(app: FastifyInstance) {
   app.delete(
     "/cadetes/:id",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Cadetes"],
         summary: "Eliminar cadete",

@@ -3,6 +3,8 @@ import { CreateRouteUseCase } from "../../../application/routes/useCases/CreateR
 import { AddStopsToRouteUseCase } from "../../../application/routes/useCases/AddStopsToRoute"
 import { ListRoutesUseCase } from "../../../application/routes/useCases/ListRoutes"
 import { GetRouteByIdUseCase } from "../../../application/routes/useCases/GetRouteById"
+import { UpdateRouteUseCase } from "../../../application/routes/useCases/UpdateRoute"
+import { DeleteRouteUseCase } from "../../../application/routes/useCases/DeleteRoute"
 import { ApplicationError } from "../../../application/errors/ApplicationError"
 
 interface CreateRouteBody {
@@ -22,12 +24,19 @@ interface RouteIdParams {
   id: string
 }
 
+interface UpdateRouteBody {
+  route_name?: string
+  description?: string | null
+}
+
 export class RouteController {
   constructor(
     private readonly createRoute: CreateRouteUseCase,
     private readonly addStopsToRoute: AddStopsToRouteUseCase,
     private readonly listRoutes: ListRoutesUseCase,
     private readonly getRouteById: GetRouteByIdUseCase,
+    private readonly updateRoute: UpdateRouteUseCase,
+    private readonly deleteRoute: DeleteRouteUseCase,
   ) {}
 
   async create(req: FastifyRequest<{ Body: CreateRouteBody }>, reply: FastifyReply) {
@@ -71,6 +80,27 @@ export class RouteController {
       const routeId = Number(req.params.id)
       const result = await this.getRouteById.execute(routeId)
       return reply.code(200).send(result)
+    } catch (error) {
+      return this.handleError(error, reply)
+    }
+  }
+
+  async update(req: FastifyRequest<{ Params: RouteIdParams; Body: UpdateRouteBody }>, reply: FastifyReply) {
+    try {
+      const result = await this.updateRoute.execute(Number(req.params.id), {
+        routeName: req.body.route_name,
+        description: req.body.description,
+      })
+      return reply.code(200).send(result)
+    } catch (error) {
+      return this.handleError(error, reply)
+    }
+  }
+
+  async delete(req: FastifyRequest<{ Params: RouteIdParams }>, reply: FastifyReply) {
+    try {
+      await this.deleteRoute.execute(Number(req.params.id))
+      return reply.code(204).send()
     } catch (error) {
       return this.handleError(error, reply)
     }

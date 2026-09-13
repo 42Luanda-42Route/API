@@ -5,6 +5,8 @@ import { CreateRouteUseCase } from "../../../application/routes/useCases/CreateR
 import { AddStopsToRouteUseCase } from "../../../application/routes/useCases/AddStopsToRoute"
 import { ListRoutesUseCase } from "../../../application/routes/useCases/ListRoutes"
 import { GetRouteByIdUseCase } from "../../../application/routes/useCases/GetRouteById"
+import { UpdateRouteUseCase } from "../../../application/routes/useCases/UpdateRoute"
+import { DeleteRouteUseCase } from "../../../application/routes/useCases/DeleteRoute"
 
 export default async function routeRoutes(app: FastifyInstance) {
   const routeRepository = new RoutePrismaRepository(app.prisma)
@@ -13,6 +15,8 @@ export default async function routeRoutes(app: FastifyInstance) {
     new AddStopsToRouteUseCase(routeRepository),
     new ListRoutesUseCase(routeRepository),
     new GetRouteByIdUseCase(routeRepository),
+    new UpdateRouteUseCase(routeRepository),
+    new DeleteRouteUseCase(routeRepository),
   )
 
   // Public routes
@@ -150,7 +154,7 @@ export default async function routeRoutes(app: FastifyInstance) {
   app.post(
     "/routes",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Routes"],
         summary: "Criar nova rota de transporte",
@@ -195,10 +199,106 @@ export default async function routeRoutes(app: FastifyInstance) {
     async (req, reply) => controller.create(req as any, reply),
   )
 
+  app.put(
+    "/routes/:id",
+    {
+      preHandler: [app.authorizeRoles("ADMIN")],
+      schema: {
+        tags: ["Routes"],
+        summary: "Atualizar rota de transporte",
+        description: "Atualiza o nome e/ou descrição de uma rota. Requer perfil ADMIN.",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "integer", minimum: 1, description: "ID da rota", example: 1 },
+          },
+        },
+        body: {
+          type: "object",
+          minProperties: 1,
+          additionalProperties: false,
+          properties: {
+            route_name: { type: "string", minLength: 2, example: "Rota Kinaxixi - 42 Luanda" },
+            description: { type: "string", nullable: true, example: "Novo itinerário da rota" },
+          },
+        },
+        response: {
+          200: {
+            description: "Rota atualizada com sucesso",
+            type: "object",
+            properties: {
+              id: { type: "integer" },
+              routeName: { type: "string" },
+              description: { type: "string", nullable: true },
+              createdAt: { type: "string" },
+            },
+          },
+          401: {
+            description: "Token em falta ou inválido",
+            type: "object",
+            properties: { error: { type: "string" }, message: { type: "string" } },
+          },
+          403: {
+            description: "Perfil sem permissão administrativa",
+            type: "object",
+            properties: { error: { type: "string" }, message: { type: "string" } },
+          },
+          404: {
+            description: "Rota não encontrada",
+            type: "object",
+            properties: { error: { type: "string", example: "Route not found" } },
+          },
+        },
+      },
+    },
+    async (req, reply) => controller.update(req as any, reply),
+  )
+
+  app.delete(
+    "/routes/:id",
+    {
+      preHandler: [app.authorizeRoles("ADMIN")],
+      schema: {
+        tags: ["Routes"],
+        summary: "Eliminar rota de transporte",
+        description: "Remove uma rota. Paragens relacionadas seguem a política de cascade do banco. Requer perfil ADMIN.",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "integer", minimum: 1, description: "ID da rota", example: 1 },
+          },
+        },
+        response: {
+          204: { description: "Rota eliminada com sucesso", type: "null" },
+          401: {
+            description: "Token em falta ou inválido",
+            type: "object",
+            properties: { error: { type: "string" }, message: { type: "string" } },
+          },
+          403: {
+            description: "Perfil sem permissão administrativa",
+            type: "object",
+            properties: { error: { type: "string" }, message: { type: "string" } },
+          },
+          404: {
+            description: "Rota não encontrada",
+            type: "object",
+            properties: { error: { type: "string", example: "Route not found" } },
+          },
+        },
+      },
+    },
+    async (req, reply) => controller.delete(req as any, reply),
+  )
+
   app.post(
     "/routes/:id/stops",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Routes"],
         summary: "Adicionar paragens existentes a uma rota",

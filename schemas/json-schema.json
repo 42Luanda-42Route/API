@@ -93,6 +93,12 @@
             }
           ]
         },
+        "boardingRequests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BoardingRequest"
+          }
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"
@@ -145,6 +151,12 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/DriverCoordinates"
+          }
+        },
+        "boardingRequests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BoardingRequest"
           }
         },
         "current_route": {
@@ -244,6 +256,12 @@
           "items": {
             "$ref": "#/definitions/Drivers"
           }
+        },
+        "boardingRequests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BoardingRequest"
+          }
         }
       }
     },
@@ -333,6 +351,44 @@
           "$ref": "#/definitions/Drivers"
         }
       }
+    },
+    "BoardingRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string",
+          "default": "PENDING",
+          "enum": [
+            "PENDING",
+            "APPROVED",
+            "REJECTED"
+          ]
+        },
+        "flagged": {
+          "type": "boolean",
+          "default": true
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "cadete": {
+          "$ref": "#/definitions/Cadetes"
+        },
+        "driver": {
+          "$ref": "#/definitions/Drivers"
+        },
+        "route": {
+          "$ref": "#/definitions/Route"
+        }
+      }
     }
   },
   "type": "object",
@@ -360,6 +416,9 @@
     },
     "driverCoordinates": {
       "$ref": "#/definitions/DriverCoordinates"
+    },
+    "boardingRequest": {
+      "$ref": "#/definitions/BoardingRequest"
     }
   }
 }

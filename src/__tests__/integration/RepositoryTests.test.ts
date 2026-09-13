@@ -53,6 +53,8 @@ describe("Prisma Repositories Integration / Mapping Tests", () => {
         count: jest.fn(),
         findUnique: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
       },
     }
   })
@@ -138,6 +140,28 @@ describe("Prisma Repositories Integration / Mapping Tests", () => {
       expect(res.total).toBe(1)
       expect(res.data[0].stops.length).toBe(1)
       expect(res.data[0].drivers.length).toBe(1)
+    })
+
+    it("should update and delete routes through Prisma", async () => {
+      const createdAt = new Date()
+      mockPrisma.route.update.mockResolvedValue({
+        id: 1,
+        route_name: "Updated Route",
+        description: "Updated",
+        createdAt,
+      })
+      mockPrisma.route.delete.mockResolvedValue({ id: 1 })
+
+      const repo = new RoutePrismaRepository(mockPrisma)
+      const updated = await repo.update(1, { routeName: "Updated Route", description: "Updated" })
+      await repo.delete(1)
+
+      expect(mockPrisma.route.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { route_name: "Updated Route", description: "Updated" },
+      })
+      expect(updated.routeName).toBe("Updated Route")
+      expect(mockPrisma.route.delete).toHaveBeenCalledWith({ where: { id: 1 } })
     })
   })
 })

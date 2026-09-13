@@ -14,6 +14,8 @@ import { FastifyInstance } from "fastify"
 import prisma from "../infrastructure/database/prismaClient"
 import { RouteLocationState } from "../domain/routes/Route"
 import { verifyToken } from "../utils/jwt"
+import { env } from "../config/env"
+import { isSelfOrRole } from "../plugins/auth"
 
 const routeLocationState: Record<number, RouteLocationState> = {}
 const driverLastUpdate: Record<number, number> = {}
@@ -21,6 +23,24 @@ const cadeteLastUpdate: Record<number, number> = {}
 
 const DRIVER_TIMEOUT = 30_000 // 30 seconds
 const LOCATION_THROTTLE_MS = 2_000 // 1 update every 2 seconds
+
+interface SocketUser {
+  id?: number
+  role?: string
+}
+
+export function canControlDriver(user: SocketUser | undefined, driverId: number): boolean {
+  return Number.isInteger(driverId) && driverId > 0 && isSelfOrRole(user, driverId, "DRIVER", ["ADMIN"])
+}
+
+export function canManageRouteSubscriptions(user: SocketUser | undefined): boolean {
+  return user?.role?.toUpperCase() === "ADMIN"
+}
+
+export function getSocketCorsOrigin(configuredOrigins: string): string | string[] {
+  if (configuredOrigins.trim() === "*") return "*"
+  return configuredOrigins.split(",").map((origin) => origin.trim()).filter(Boolean)
+}
 
 function isDriverActive(routeId: number): boolean {
   const state = routeLocationState[routeId]
@@ -32,14 +52,14 @@ function isDriverActive(routeId: number): boolean {
 export function initSocket(app: FastifyInstance) {
   const io = new Server(app.server, {
     cors: {
-      origin: "*",
+      origin: getSocketCorsOrigin(env.CORS_ORIGINS),
     },
     pingInterval: 10000,
     pingTimeout: 5000,
     transports: ["websocket", "polling"],
     connectionStateRecovery: {
       maxDisconnectionDuration: 2 * 60 * 1000,
-      skipMiddlewares: true,
+      skipMiddlewares: false,
     },
   })
 
@@ -71,17 +91,57 @@ export function initSocket(app: FastifyInstance) {
   })
 
   io.on("connection", (socket: Socket) => {
-    const user = (socket as any).user
+    const user = (socket as any).user as SocketUser
+
+    const emitValidationError = (event: string, message: string) => {
+      socket.emit("socket:error", { event, message })
+    }
 
     socket.on("ping", () => {
       socket.emit("pong")
     })
 
+    socket.on("route:subscribe", async (data?: { routeId?: number }) => {
+      const routeId = typeof data?.routeId === "number" ? data.routeId : Number.NaN
+      if (!canManageRouteSubscriptions(user)) {
+        emitValidationError("route:subscribe", "Only administrators can subscribe directly to routes")
+        return
+      }
+      if (!Number.isInteger(routeId) || routeId <= 0) {
+        emitValidationError("route:subscribe", "routeId must be a positive integer")
+        return
+      }
+
+      await socket.join(`route_${routeId}`)
+      socket.emit("route:subscribed", { routeId })
+    })
+
+    socket.on("route:unsubscribe", async (data?: { routeId?: number }) => {
+      const routeId = typeof data?.routeId === "number" ? data.routeId : Number.NaN
+      if (!canManageRouteSubscriptions(user)) {
+        emitValidationError("route:unsubscribe", "Only administrators can unsubscribe directly from routes")
+        return
+      }
+      if (!Number.isInteger(routeId) || routeId <= 0) {
+        emitValidationError("route:unsubscribe", "routeId must be a positive integer")
+        return
+      }
+
+      await socket.leave(`route_${routeId}`)
+      socket.emit("route:unsubscribed", { routeId })
+    })
+
     /**
      * Driver joins route room
      */
-    socket.on("driver:joinRoute", async ({ driverId }: { driverId: number }) => {
+    socket.on("driver:joinRoute", async (data?: { driverId?: number }) => {
       try {
+        const driverId = typeof data?.driverId === "number" ? data.driverId : Number.NaN
+        if (!canControlDriver(user, driverId)) {
+          emitValidationError("driver:joinRoute", "Drivers can only join their own route")
+          return
+        }
+
         const driver = await prisma.drivers.findUnique({
           where: { id: driverId },
         })
@@ -100,8 +160,14 @@ export function initSocket(app: FastifyInstance) {
     /**
      * Driver leaves route room
      */
-    socket.on("driver:leaveRoute", async ({ driverId }: { driverId: number }) => {
+    socket.on("driver:leaveRoute", async (data?: { driverId?: number }) => {
       try {
+        const driverId = typeof data?.driverId === "number" ? data.driverId : Number.NaN
+        if (!canControlDriver(user, driverId)) {
+          emitValidationError("driver:leaveRoute", "Drivers can only leave their own route")
+          return
+        }
+
         const driver = await prisma.drivers.findUnique({
           where: { id: driverId },
         })
@@ -113,7 +179,12 @@ export function initSocket(app: FastifyInstance) {
         const room = `route_${driver.current_route_id}`
         socket.leave(room)
 
-        delete routeLocationState[driver.current_route_id]
+        if (
+          routeLocationState[driver.current_route_id]?.source === "driver" &&
+          routeLocationState[driver.current_route_id]?.sourceId === driverId
+        ) {
+          delete routeLocationState[driver.current_route_id]
+        }
         io.to(room).emit("driver:inactive", {
           driverId,
           routeId: driver.current_route_id,
@@ -186,15 +257,19 @@ export function initSocket(app: FastifyInstance) {
     /**
      * Driver updates location
      */
-    socket.on("driver:updateLocation", async (data: { id_driver: number; lat: number; long: number }) => {
+    socket.on("driver:updateLocation", async (data?: { id_driver?: number; lat?: number; long?: number }) => {
       try {
-        const { id_driver, lat, long } = data
+        const id_driver = typeof data?.id_driver === "number" ? data.id_driver : Number.NaN
+        const lat = typeof data?.lat === "number" ? data.lat : Number.NaN
+        const long = typeof data?.long === "number" ? data.long : Number.NaN
 
-        if (!id_driver || lat === undefined || long === undefined) {
-          socket.emit("socket:error", {
-            event: "driver:updateLocation",
-            message: "Missing required fields: id_driver, lat, long",
-          })
+        if (!canControlDriver(user, id_driver)) {
+          emitValidationError("driver:updateLocation", "Drivers can only update their own location")
+          return
+        }
+
+        if (!Number.isFinite(lat) || !Number.isFinite(long) || lat < -90 || lat > 90 || long < -180 || long > 180) {
+          emitValidationError("driver:updateLocation", "lat and long must be valid coordinates")
           return
         }
 

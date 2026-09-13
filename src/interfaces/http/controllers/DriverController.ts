@@ -146,7 +146,7 @@ export class DriverController {
       // Notify socket room that driver left (if there was a route)
       const io = (req.server as any).io
       if (io && oldRouteId) {
-        io.to(`route_${oldRouteId}`).emit("driver:left", {
+        io.to(`route_${oldRouteId}`).emit("driver:inactive", {
           driverId,
           routeId: oldRouteId,
           driverName: driver?.fullName ?? driver?.username ?? null,

@@ -122,7 +122,7 @@ export default async function driverRoutes(app: FastifyInstance) {
   app.post(
     "/drivers",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Drivers"],
         summary: "Criar novo motorista",
@@ -182,12 +182,12 @@ export default async function driverRoutes(app: FastifyInstance) {
     async (req, reply) => controller.create(req as any, reply),
   )
 
-  app.post("/driver", { preHandler: [app.authenticate], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.create(req as any, reply))
+  app.post("/driver", { preHandler: [app.authorizeRoles("ADMIN")], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.create(req as any, reply))
 
   app.put(
     "/drivers/:id",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Drivers"],
         summary: "Atualizar dados do motorista",
@@ -247,12 +247,12 @@ export default async function driverRoutes(app: FastifyInstance) {
     async (req, reply) => controller.update(req as any, reply),
   )
 
-  app.put("/driver/:id", { preHandler: [app.authenticate], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.update(req as any, reply))
+  app.put("/driver/:id", { preHandler: [app.authorizeRoles("ADMIN")], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.update(req as any, reply))
 
   app.delete(
     "/drivers/:id",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Drivers"],
         summary: "Eliminar motorista",
@@ -290,12 +290,12 @@ export default async function driverRoutes(app: FastifyInstance) {
     async (req, reply) => controller.delete(req as any, reply),
   )
 
-  app.delete("/driver/:id", { preHandler: [app.authenticate], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.delete(req as any, reply))
+  app.delete("/driver/:id", { preHandler: [app.authorizeRoles("ADMIN")], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.delete(req as any, reply))
 
   app.put(
     "/drivers/:id/location",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeSelfOrRoles("DRIVER", ["ADMIN"])],
       schema: {
         tags: ["Drivers"],
         summary: "Atualizar localização do motorista (HTTP + WebSocket Broadcast)",
@@ -348,12 +348,12 @@ export default async function driverRoutes(app: FastifyInstance) {
     async (req, reply) => controller.updateLocationHandler(req as any, reply),
   )
 
-  app.put("/driver/location/socket/:id", { preHandler: [app.authenticate], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.updateLocationHandler(req as any, reply))
+  app.put("/driver/location/socket/:id", { preHandler: [app.authorizeSelfOrRoles("DRIVER", ["ADMIN"])], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.updateLocationHandler(req as any, reply))
 
   app.post(
     "/drivers/:id/assign-route",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Drivers"],
         summary: "Atribuir rota a um motorista",
@@ -408,12 +408,12 @@ export default async function driverRoutes(app: FastifyInstance) {
     async (req, reply) => controller.assignRouteHandler(req as any, reply),
   )
 
-  app.post("/driver/assign/route/:id", { preHandler: [app.authenticate], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.assignRouteHandler(req as any, reply))
+  app.post("/driver/assign/route/:id", { preHandler: [app.authorizeRoles("ADMIN")], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.assignRouteHandler(req as any, reply))
 
   app.delete(
     "/drivers/:id/leave-route",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeSelfOrRoles("DRIVER", ["ADMIN"])],
       schema: {
         tags: ["Drivers"],
         summary: "Remover motorista da sua rota atual",
@@ -449,5 +449,5 @@ export default async function driverRoutes(app: FastifyInstance) {
     async (req, reply) => controller.leaveRouteHandler(req as any, reply),
   )
 
-  app.delete("/driver/leave/route/:id", { preHandler: [app.authenticate], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.leaveRouteHandler(req as any, reply))
+  app.delete("/driver/leave/route/:id", { preHandler: [app.authorizeSelfOrRoles("DRIVER", ["ADMIN"])], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.leaveRouteHandler(req as any, reply))
 }

@@ -106,7 +106,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   app.post(
     "/admins",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Admins"],
         summary: "Criar novo administrador",
@@ -165,7 +165,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   app.put(
     "/admins/:id",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Admins"],
         summary: "Atualizar administrador",
@@ -222,7 +222,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   app.delete(
     "/admins/:id",
     {
-      preHandler: [app.authenticate],
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Admins"],
         summary: "Eliminar administrador",

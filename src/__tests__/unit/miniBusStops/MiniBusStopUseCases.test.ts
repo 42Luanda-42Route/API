@@ -21,6 +21,8 @@ describe("MiniBusStop Use Cases", () => {
     }
     routeRepo = {
       create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
       addStops: jest.fn(),
       list: jest.fn(),
       getById: jest.fn(),
