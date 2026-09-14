@@ -1,4 +1,5 @@
 import {
+  canControlCadete,
   canControlDriver,
   canManageRouteSubscriptions,
   getSocketCorsOrigin,
@@ -16,6 +17,12 @@ describe("Socket authorization contract", () => {
     expect(canManageRouteSubscriptions({ id: 1, role: "ADMIN" })).toBe(true)
     expect(canManageRouteSubscriptions({ id: 1, role: "DRIVER" })).toBe(false)
     expect(canManageRouteSubscriptions({ id: 1, role: "CADETE" })).toBe(false)
+  })
+
+  it("prevents cadetes from impersonating another cadete", () => {
+    expect(canControlCadete({ id: 4, role: "CADETE" }, 4)).toBe(true)
+    expect(canControlCadete({ id: 4, role: "CADETE" }, 5)).toBe(false)
+    expect(canControlCadete({ id: 4, role: "DRIVER" }, 4)).toBe(false)
   })
 
   it("uses the configured Socket.IO CORS origins", () => {
