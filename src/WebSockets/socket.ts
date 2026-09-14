@@ -10,6 +10,34 @@ export function emitToRoute(routeId: number, event: string, payload: unknown) {
   if (!ioInstance || !routeId) return
   ioInstance.to(`route_${routeId}`).emit(event, payload)
 }
+
+export function emitToUser(role: string, userId: number, event: string, payload: unknown) {
+  if (!ioInstance || !userId) return
+  ioInstance.to(`user_${role.toUpperCase()}_${userId}`).emit(event, payload)
+}
+
+export function emitToAdmins(event: string, payload: unknown) {
+  if (!ioInstance) return
+  ioInstance.to("admins").emit(event, payload)
+}
+
+export function emitTripEvent(
+  event: "trip:created" | "trip:updated",
+  trip: { routeId: number; driverId: number },
+) {
+  emitToUser("DRIVER", trip.driverId, event, trip)
+  emitToRoute(trip.routeId, event, trip)
+  emitToAdmins(event, trip)
+}
+
+export function emitBoardingEvent(
+  event: "boarding:request:created" | "boarding:request:updated",
+  request: { routeId: number; driverId: number; cadeteId: number },
+) {
+  emitToUser("DRIVER", request.driverId, event, request)
+  emitToUser("CADETE", request.cadeteId, event, request)
+  emitToAdmins(event, request)
+}
 import { FastifyInstance } from "fastify"
 import prisma from "../infrastructure/database/prismaClient"
 import { RouteLocationState } from "../domain/routes/Route"
@@ -31,6 +59,10 @@ interface SocketUser {
 
 export function canControlDriver(user: SocketUser | undefined, driverId: number): boolean {
   return Number.isInteger(driverId) && driverId > 0 && isSelfOrRole(user, driverId, "DRIVER", ["ADMIN"])
+}
+
+export function canControlCadete(user: SocketUser | undefined, cadeteId: number): boolean {
+  return Number.isInteger(cadeteId) && cadeteId > 0 && isSelfOrRole(user, cadeteId, "CADETE", ["ADMIN"])
 }
 
 export function canManageRouteSubscriptions(user: SocketUser | undefined): boolean {
@@ -92,6 +124,12 @@ export function initSocket(app: FastifyInstance) {
 
   io.on("connection", (socket: Socket) => {
     const user = (socket as any).user as SocketUser
+    const role = user?.role?.toUpperCase()
+    const userId = Number(user?.id)
+    if (role && Number.isInteger(userId) && userId > 0) {
+      void socket.join(`user_${role}_${userId}`)
+      if (role === "ADMIN") void socket.join("admins")
+    }
 
     const emitValidationError = (event: string, message: string) => {
       socket.emit("socket:error", { event, message })
@@ -197,27 +235,35 @@ export function initSocket(app: FastifyInstance) {
     /**
      * Cadete joins route room
      */
-    socket.on("cadete:joinRoute", async (data: { cadeteId?: number; routeId?: number }) => {
+    socket.on("cadete:joinRoute", async (data?: { cadeteId?: number; routeId?: number }) => {
       try {
-        const authUser = (socket as any).user
-        const cadeteId = data?.cadeteId || authUser?.id
-        let cadeteRouteId = data?.routeId
-
-        if (!cadeteRouteId && cadeteId) {
-          const cadete = await prisma.cadetes.findUnique({
-            where: { id: cadeteId },
-            include: {
-              stop: {
-                include: {
-                  route: true,
-                },
-              },
-            },
-          })
-          cadeteRouteId = cadete?.stop?.route?.id
+        const cadeteId = Number(user?.id)
+        if (!canControlCadete(user, cadeteId) || role !== "CADETE") {
+          emitValidationError("cadete:joinRoute", "Cadetes can only join their own route")
+          return
+        }
+        if (data?.cadeteId && data.cadeteId !== cadeteId) {
+          emitValidationError("cadete:joinRoute", "cadeteId must match the authenticated user")
+          return
         }
 
-        const effectiveRouteId = cadeteRouteId || authUser?.currentRouteId
+        const cadete = await prisma.cadetes.findUnique({
+          where: { id: cadeteId },
+          include: {
+            stop: {
+              include: {
+                route: true,
+              },
+            },
+          },
+        })
+        const cadeteRouteId = cadete?.stop?.route?.id
+        if (data?.routeId && data.routeId !== cadeteRouteId) {
+          emitValidationError("cadete:joinRoute", "routeId must match the cadete route")
+          return
+        }
+
+        const effectiveRouteId = cadeteRouteId
         if (!effectiveRouteId) {
           return
         }
@@ -338,11 +384,20 @@ export function initSocket(app: FastifyInstance) {
       try {
         const { cadeteId, lat, long } = data
 
-        if (!cadeteId || lat === undefined || long === undefined) {
+        if (!canControlCadete(user, cadeteId) || role !== "CADETE") {
+          emitValidationError("cadete:updateLocation", "Cadetes can only update their own location")
+          return
+        }
+
+        if (lat === undefined || long === undefined) {
           socket.emit("socket:error", {
             event: "cadete:updateLocation",
             message: "Missing required fields: cadeteId, lat, long",
           })
+          return
+        }
+        if (!Number.isFinite(lat) || !Number.isFinite(long) || lat < -90 || lat > 90 || long < -180 || long > 180) {
+          emitValidationError("cadete:updateLocation", "lat and long must be valid coordinates")
           return
         }
 
