@@ -19,13 +19,14 @@ export default async function cadeteRoutes(app: FastifyInstance) {
     new GetCadeteRouteInfoUseCase(repo),
   )
 
-  // Public routes
   app.get(
     "/cadetes",
     {
+      preHandler: [app.authenticate],
       schema: {
         tags: ["Cadetes"],
         summary: "Listar cadetes",
+        security: [{ bearerAuth: [] }],
         description: "Retorna a lista paginada de todos os cadetes registrados no sistema.",
         querystring: {
           type: "object",
@@ -71,9 +72,11 @@ export default async function cadeteRoutes(app: FastifyInstance) {
   app.get(
     "/cadetes/:id",
     {
+      preHandler: [app.authenticate],
       schema: {
         tags: ["Cadetes"],
         summary: "Obter cadete por ID",
+        security: [{ bearerAuth: [] }],
         description: "Retorna os dados cadastrais de um cadete específico.",
         params: {
           type: "object",
@@ -115,9 +118,11 @@ export default async function cadeteRoutes(app: FastifyInstance) {
   app.get(
     "/cadetes/:id/route-info",
     {
+      preHandler: [app.authenticate],
       schema: {
         tags: ["Cadetes"],
         summary: "Obter informações de rota do cadete",
+        security: [{ bearerAuth: [] }],
         description: "Retorna os detalhes da paragem e da rota atribuída ao cadete, incluindo os motoristas ativos na mesma.",
         params: {
           type: "object",
@@ -180,10 +185,12 @@ export default async function cadeteRoutes(app: FastifyInstance) {
   app.get(
     "/cadete/route/informations/:id",
     {
+      preHandler: [app.authenticate],
       schema: {
         tags: ["Cadetes"],
         summary: "Obter informações de rota do cadete (legado)",
         deprecated: true,
+        security: [{ bearerAuth: [] }],
         params: {
           type: "object",
           required: ["id"],
@@ -266,11 +273,11 @@ export default async function cadeteRoutes(app: FastifyInstance) {
   app.put(
     "/cadetes/:id",
     {
-      preHandler: [app.authorizeRoles("ADMIN")],
+      preHandler: [app.authorizeSelfOrRoles("CADETE", ["ADMIN"])],
       schema: {
         tags: ["Cadetes"],
         summary: "Atualizar cadete",
-        description: "Atualiza os dados de um cadete existente. Requer autenticação JWT.",
+        description: "O cadete atualiza o próprio perfil (paragem, distrito, telefone). ADMIN pode atualizar qualquer cadete.",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",

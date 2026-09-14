@@ -9,20 +9,40 @@ export class AssignRouteUseCase {
 
   async execute(input: AssignRouteInput): Promise<Driver> {
     if (!input.driverId || Number.isNaN(input.driverId)) {
-      throw new ApplicationError("Driver id must be valid", 422)
+      throw new ApplicationError("O id do motorista deve ser um inteiro positivo.", 422, {
+        code: "INVALID_DRIVER_ID",
+        hint: "Use POST /api/drivers/:id/assign-route com um id numérico.",
+      })
     }
     if (!input.current_route_id || Number.isNaN(input.current_route_id)) {
-      throw new ApplicationError("route_id must be valid", 422)
+      throw new ApplicationError("O campo current_route_id deve ser um inteiro positivo.", 422, {
+        code: "INVALID_ROUTE_ID",
+        hint: "Envie { \"current_route_id\": <id da rota existente> }.",
+      })
+    }
+
+    const driver = await this.drivers.getById(input.driverId)
+    if (!driver) {
+      throw new ApplicationError(`Motorista #${input.driverId} não encontrado. Não é possível atribuir rota.`, 404, {
+        code: "DRIVER_NOT_FOUND",
+        hint: "Liste motoristas em GET /api/drivers e confirme o id.",
+      })
     }
 
     const route = await this.routes.getById(input.current_route_id)
     if (!route) {
-      throw new ApplicationError(`route_id: ${input.current_route_id} does not exist`, 404)
+      throw new ApplicationError(
+        `A rota #${input.current_route_id} não existe. Não é possível atribuí-la ao motorista #${input.driverId}.`,
+        404,
+        {
+          code: "ROUTE_NOT_FOUND",
+          hint: "Liste rotas em GET /api/routes e use um current_route_id válido.",
+        },
+      )
     }
 
-    // Ensure uniqueness: if another driver has this route, clear it first
     const existingDriverId = await this.drivers.findDriverIdByRoute(input.current_route_id)
-    if (existingDriverId) {
+    if (existingDriverId && existingDriverId !== input.driverId) {
       await this.drivers.leaveRoute(existingDriverId)
     }
 

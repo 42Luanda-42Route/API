@@ -56,6 +56,17 @@ describe("Prisma Repositories Integration / Mapping Tests", () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      trip: {
+        count: jest.fn().mockResolvedValue(0),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      $transaction: jest.fn(async (callback: any) =>
+        callback({
+          trip: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+          route: { delete: jest.fn().mockResolvedValue({ id: 1 }) },
+          drivers: { delete: jest.fn().mockResolvedValue({ id: 1 }) },
+        }),
+      ),
     }
   })
 
@@ -161,7 +172,7 @@ describe("Prisma Repositories Integration / Mapping Tests", () => {
         data: { route_name: "Updated Route", description: "Updated" },
       })
       expect(updated.routeName).toBe("Updated Route")
-      expect(mockPrisma.route.delete).toHaveBeenCalledWith({ where: { id: 1 } })
+      expect(mockPrisma.$transaction).toHaveBeenCalled()
     })
   })
 })

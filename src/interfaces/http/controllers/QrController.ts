@@ -119,7 +119,7 @@ export class QrController {
 
   private handle(error: unknown, reply: FastifyReply) {
     if (error instanceof ApplicationError) {
-      return reply.status(error.statusCode).send({ error: error.message })
+      return reply.status(error.statusCode).send(error.toPayload())
     }
     reply.log.error(error)
     return reply.status(500).send({ error: "Internal server error" })

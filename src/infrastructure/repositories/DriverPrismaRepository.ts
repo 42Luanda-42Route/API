@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import { DriverRepository } from "../../domain/drivers/DriverRepository"
 import { Driver, DriverCoordinates } from "../../domain/drivers/Driver"
+import { ApplicationError } from "../../application/errors/ApplicationError"
 import { handlePrismaError } from "../errors/PrismaErrorHandler"
 
 export class DriverPrismaRepository implements DriverRepository {
@@ -64,8 +65,26 @@ export class DriverPrismaRepository implements DriverRepository {
 
   async delete(id: number): Promise<void> {
     try {
-      await this.prisma.drivers.delete({ where: { id } })
+      const activeTrips = await this.prisma.trip.count({
+        where: { driver_id: id, status: "ACTIVE" },
+      })
+      if (activeTrips > 0) {
+        throw new ApplicationError(
+          `Não é possível apagar o motorista #${id}: existem ${activeTrips} viagem(ns) ACTIVE associadas.`,
+          409,
+          {
+            code: "DRIVER_HAS_ACTIVE_TRIP",
+            hint: "O motorista deve concluir a viagem (POST /api/trips/:id/complete) ou um admin deve cancelá-la (POST /api/trips/:id/cancel) antes de apagar o motorista.",
+          },
+        )
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.trip.deleteMany({ where: { driver_id: id } })
+        await tx.drivers.delete({ where: { id } })
+      })
     } catch (error) {
+      if (error instanceof ApplicationError) throw error
       handlePrismaError(error)
     }
   }

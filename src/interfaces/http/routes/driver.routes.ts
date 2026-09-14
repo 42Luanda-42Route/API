@@ -27,13 +27,14 @@ export default async function driverRoutes(app: FastifyInstance) {
     new LoginDriverUseCase(driverRepo),
   )
 
-  // Public routes
   app.get(
     "/drivers",
     {
+      preHandler: [app.authenticate],
       schema: {
         tags: ["Drivers"],
         summary: "Listar motoristas",
+        security: [{ bearerAuth: [] }],
         description: "Retorna a lista paginada de motoristas cadastrados (sem expor passwords).",
         querystring: {
           type: "object",
@@ -77,9 +78,11 @@ export default async function driverRoutes(app: FastifyInstance) {
   app.get(
     "/drivers/:id",
     {
+      preHandler: [app.authenticate],
       schema: {
         tags: ["Drivers"],
         summary: "Obter motorista por ID",
+        security: [{ bearerAuth: [] }],
         description: "Retorna os detalhes de um motorista específico pelo seu ID.",
         params: {
           type: "object",
@@ -187,11 +190,11 @@ export default async function driverRoutes(app: FastifyInstance) {
   app.put(
     "/drivers/:id",
     {
-      preHandler: [app.authorizeRoles("ADMIN")],
+      preHandler: [app.authorizeSelfOrRoles("DRIVER", ["ADMIN"])],
       schema: {
         tags: ["Drivers"],
         summary: "Atualizar dados do motorista",
-        description: "Atualiza informações do motorista (nome, telefone, rota, etc). Requer autenticação JWT.",
+        description: "O motorista atualiza o próprio perfil. ADMIN pode atualizar qualquer motorista e a rota.",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
@@ -247,7 +250,7 @@ export default async function driverRoutes(app: FastifyInstance) {
     async (req, reply) => controller.update(req as any, reply),
   )
 
-  app.put("/driver/:id", { preHandler: [app.authorizeRoles("ADMIN")], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.update(req as any, reply))
+  app.put("/driver/:id", { preHandler: [app.authorizeSelfOrRoles("DRIVER", ["ADMIN"])], schema: { tags: ["Drivers"], deprecated: true, security: [{ bearerAuth: [] }] } }, async (req, reply) => controller.update(req as any, reply))
 
   app.delete(
     "/drivers/:id",

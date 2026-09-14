@@ -207,6 +207,45 @@ describe("Driver Use Cases", () => {
     })
   })
 
+  describe("UpdateDriverUseCase", () => {
+    const existing = {
+      id: 1,
+      fullName: "Driver",
+      username: "d",
+      email: "d@d.com",
+      password: "h",
+      photo: null,
+      phone: null,
+      currentRouteId: 2,
+      createdAt: new Date(),
+    }
+
+    it("lets a driver update their own phone", async () => {
+      driverRepo.getById.mockResolvedValue(existing)
+      driverRepo.update.mockResolvedValue({ ...existing, phone: 923000111 })
+
+      const result = await new UpdateDriverUseCase(driverRepo).execute(
+        1,
+        { phone: 923000111 },
+        { id: 1, role: "DRIVER" },
+      )
+      expect(result.phone).toBe(923000111)
+    })
+
+    it("blocks a driver from changing current_route_id on PUT", async () => {
+      driverRepo.getById.mockResolvedValue(existing)
+
+      await expect(
+        new UpdateDriverUseCase(driverRepo).execute(
+          1,
+          { current_route_id: 9 },
+          { id: 1, role: "DRIVER" },
+        ),
+      ).rejects.toMatchObject({ statusCode: 403, code: "DRIVER_CANNOT_ASSIGN_ROUTE" })
+      expect(driverRepo.update).not.toHaveBeenCalled()
+    })
+  })
+
   describe("LoginDriverUseCase", () => {
     it("should return token on correct credentials", async () => {
       const hash = await bcrypt.hash("password123", 10)

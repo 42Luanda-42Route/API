@@ -86,6 +86,8 @@ export default async function authRoutes(app: FastifyInstance) {
             type: "object",
             properties: {
               token: { type: "string", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+              refreshToken: { type: "string" },
+              user: { type: "object", additionalProperties: true },
               isDBUser: { type: "boolean", example: false, description: "True se o cadete já estiver registado no banco de dados local" },
               needsOnboarding: { type: "boolean", example: true, description: "True se o cadete for novo ou não tiver paragem definida" },
               hasDistrict: { type: "boolean", example: false, description: "True se já tiver distrito associado" },
@@ -152,13 +154,28 @@ export default async function authRoutes(app: FastifyInstance) {
             type: "object",
             properties: {
               token: { type: "string", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+              refreshToken: { type: "string" },
+              user: {
+                type: "object",
+                additionalProperties: true,
+                properties: {
+                  id: { type: "integer" },
+                  username: { type: "string", nullable: true },
+                  email: { type: "string", nullable: true },
+                  fullName: { type: "string", nullable: true },
+                  role: { type: "string", example: "DRIVER" },
+                },
+              },
             },
           },
           401: {
             description: "Credenciais inválidas",
             type: "object",
+            additionalProperties: true,
             properties: {
-              error: { type: "string", example: "Invalid credentials" },
+              error: { type: "string", example: "Credenciais inválidas." },
+              code: { type: "string", example: "INVALID_CREDENTIALS" },
+              hint: { type: "string" },
             },
           },
         },
@@ -196,13 +213,28 @@ export default async function authRoutes(app: FastifyInstance) {
             type: "object",
             properties: {
               token: { type: "string", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+              refreshToken: { type: "string" },
+              user: {
+                type: "object",
+                additionalProperties: true,
+                properties: {
+                  id: { type: "integer" },
+                  username: { type: "string", nullable: true },
+                  email: { type: "string", nullable: true },
+                  fullName: { type: "string", nullable: true },
+                  role: { type: "string", example: "ADMIN" },
+                },
+              },
             },
           },
           401: {
             description: "Credenciais inválidas",
             type: "object",
+            additionalProperties: true,
             properties: {
-              error: { type: "string", example: "Invalid credentials" },
+              error: { type: "string", example: "Credenciais inválidas." },
+              code: { type: "string", example: "INVALID_CREDENTIALS" },
+              hint: { type: "string" },
             },
           },
         },

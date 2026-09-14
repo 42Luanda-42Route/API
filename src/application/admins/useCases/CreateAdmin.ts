@@ -9,17 +9,30 @@ export class CreateAdminUseCase {
 
   async execute(input: CreateAdminInput): Promise<Admin> {
     if (!input.password || input.password.length < 8) {
-      throw new ApplicationError("Password must be at least 8 characters", 422)
+      throw new ApplicationError("A password do administrador deve ter pelo menos 8 caracteres.", 422, {
+        code: "PASSWORD_TOO_SHORT",
+        hint: "Envie { \"password\": \"...\" } com 8 ou mais caracteres em POST /api/admins.",
+      })
     }
 
     if (input.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
-      throw new ApplicationError("Invalid email format", 422)
+      throw new ApplicationError(`O email «${input.email}» não é válido.`, 422, {
+        code: "INVALID_EMAIL",
+        hint: "Use um email no formato nome@dominio.tld.",
+      })
     }
 
     if (input.username || input.email) {
       const existing = await this.repo.findByUsernameOrEmail(input.username || input.email || "")
       if (existing) {
-        throw new ApplicationError("Username or email already exists", 409)
+        throw new ApplicationError(
+          `Já existe um administrador com username «${input.username ?? existing.username}» ou email «${input.email ?? existing.email}».`,
+          409,
+          {
+            code: "ADMIN_ALREADY_EXISTS",
+            hint: "Escolha outro username/email ou atualize o registo existente com PUT /api/admins/:id.",
+          },
+        )
       }
     }
 

@@ -19,13 +19,14 @@ export default async function minibusstopsRoutes(app: FastifyInstance) {
     new DeleteStopUseCase(stopRepo),
   )
 
-  // Public routes
   app.get(
     "/minibusstops",
     {
+      preHandler: [app.authenticate],
       schema: {
         tags: ["MiniBusStops"],
         summary: "Listar paragens de minibus/autocarro",
+        security: [{ bearerAuth: [] }],
         description: "Retorna a lista paginada de todas as paragens cadastradas no sistema.",
         querystring: {
           type: "object",
@@ -69,9 +70,11 @@ export default async function minibusstopsRoutes(app: FastifyInstance) {
   app.get(
     "/minibusstops/:id",
     {
+      preHandler: [app.authenticate],
       schema: {
         tags: ["MiniBusStops"],
         summary: "Obter paragem por ID",
+        security: [{ bearerAuth: [] }],
         description: "Retorna os detalhes de uma paragem específica pelo seu ID.",
         params: {
           type: "object",

@@ -27,7 +27,11 @@ const authPlugin: FastifyPluginAsync = fp(async (fastify) => {
     try {
       await request.jwtVerify()
     } catch {
-      return reply.code(401).send({ error: "Unauthorized", message: "Invalid or expired token" })
+      return reply.code(401).send({
+        error: "Token em falta, inválido ou expirado. Inicie sessão novamente.",
+        code: "UNAUTHORIZED",
+        hint: "Envie Authorization: Bearer <jwt> obtido em /api/auth/42/login, /api/auth/42/driver/login ou /api/auth/42/admin/login.",
+      })
     }
   }
 
@@ -38,8 +42,14 @@ const authPlugin: FastifyPluginAsync = fp(async (fastify) => {
       await authenticate(request, reply)
       if (reply.sent) return
 
-      if (!hasRole(request.user as AuthenticatedUser, allowedRoles)) {
-        return reply.code(403).send({ error: "Forbidden", message: "Insufficient permissions" })
+      const user = request.user as AuthenticatedUser
+      if (!hasRole(user, allowedRoles)) {
+        const current = user?.role?.toUpperCase() || "sem perfil"
+        return reply.code(403).send({
+          error: `Acesso recusado: o perfil ${current} não pode executar esta operação. É necessário um dos perfis: ${allowedRoles.join(", ")}.`,
+          code: "FORBIDDEN_ROLE",
+          hint: "Use uma conta com o perfil indicado ou um endpoint permitido para o seu perfil.",
+        })
       }
     }
   })
@@ -53,8 +63,13 @@ const authPlugin: FastifyPluginAsync = fp(async (fastify) => {
 
         const params = request.params as Record<string, unknown>
         const resourceId = Number(params?.[paramName])
-        if (!Number.isInteger(resourceId) || !isSelfOrRole(request.user as AuthenticatedUser, resourceId, ownerRole, allowedRoles)) {
-          return reply.code(403).send({ error: "Forbidden", message: "Cannot act on this resource" })
+        const user = request.user as AuthenticatedUser
+        if (!Number.isInteger(resourceId) || !isSelfOrRole(user, resourceId, ownerRole, allowedRoles)) {
+          return reply.code(403).send({
+            error: `Só pode alterar o próprio registo (id ${user?.id ?? "desconhecido"}). Pediu o id ${resourceId}. Administradores podem atuar em qualquer id.`,
+            code: "FORBIDDEN_RESOURCE",
+            hint: `Use PUT/PATCH /.../${user?.id} ou autentique-se como ADMIN.`,
+          })
         }
       }
     },

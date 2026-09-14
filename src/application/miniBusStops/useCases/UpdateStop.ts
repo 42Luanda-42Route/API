@@ -9,18 +9,31 @@ export class UpdateStopUseCase {
 
   async execute(id: number, input: UpdateStopInput): Promise<MiniBusStop> {
     if (!id || Number.isNaN(id)) {
-      throw new ApplicationError("Stop id must be valid", 422)
+      throw new ApplicationError("O id da paragem deve ser um inteiro positivo.", 422, {
+        code: "INVALID_STOP_ID",
+        hint: "Use PUT /api/minibusstops/:id com um id numérico.",
+      })
     }
 
     const existing = await this.repo.getById(id)
     if (!existing) {
-      throw new ApplicationError("Bus stop not found", 404)
+      throw new ApplicationError(`Paragem #${id} não encontrada. Não é possível atualizar.`, 404, {
+        code: "STOP_NOT_FOUND",
+        hint: "Liste paragens em GET /api/minibusstops e confirme o id.",
+      })
     }
 
     if (input.route_id) {
       const route = await this.routes.getById(input.route_id)
       if (!route) {
-        throw new ApplicationError("Route not found", 404)
+        throw new ApplicationError(
+          `A rota #${input.route_id} não existe. Não é possível mover a paragem #${id} para essa rota.`,
+          404,
+          {
+            code: "ROUTE_NOT_FOUND",
+            hint: "Liste rotas em GET /api/routes e use um route_id válido.",
+          },
+        )
       }
     }
 

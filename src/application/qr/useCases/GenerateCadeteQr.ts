@@ -9,15 +9,28 @@ export class GenerateCadeteQrUseCase {
 
   async execute(input: GenerateCadeteQrInput): Promise<{ qr: string; expiresAt: string; cadeteId: number }> {
     if (input.role !== "CADETE") {
-      throw new ApplicationError("Apenas cadetes podem gerar o seu QR de identificação", 403)
+      throw new ApplicationError(
+        `O perfil ${input.role || "desconhecido"} não pode gerar QR de identificação de cadete.`,
+        403,
+        {
+          code: "FORBIDDEN_ROLE",
+          hint: "Autentique-se como CADETE em POST /api/qr/cadete/generate.",
+        },
+      )
     }
     if (!input.cadeteId || Number.isNaN(input.cadeteId)) {
-      throw new ApplicationError("Cadete id must be valid", 422)
+      throw new ApplicationError("O id do cadete deve ser um inteiro positivo.", 422, {
+        code: "INVALID_CADETE_ID",
+        hint: "O JWT do cadete deve ter o id da tabela Cadetes.",
+      })
     }
 
     const cadete = await this.cadetes.getById(input.cadeteId)
     if (!cadete) {
-      throw new ApplicationError("Cadete não encontrado", 404)
+      throw new ApplicationError(`Cadete #${input.cadeteId} não encontrado. Não é possível gerar o QR.`, 404, {
+        code: "CADETE_NOT_FOUND",
+        hint: "Confirme o id do JWT em GET /api/cadetes/:id.",
+      })
     }
 
     const iat = Math.floor(Date.now() / 1000)

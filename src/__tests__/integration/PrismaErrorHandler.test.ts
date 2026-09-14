@@ -19,7 +19,8 @@ describe("PrismaErrorHandler", () => {
       handlePrismaError(error)
     } catch (err: any) {
       expect(err.statusCode).toBe(409)
-      expect(err.message).toContain("referenced record does not exist")
+      expect(err.message).toContain("chave estrangeira")
+      expect(err.code).toBe("FOREIGN_KEY_CONSTRAINT")
     }
   })
 
@@ -29,7 +30,34 @@ describe("PrismaErrorHandler", () => {
       handlePrismaError(error)
     } catch (err: any) {
       expect(err.statusCode).toBe(404)
-      expect(err.message).toContain("Record not found")
+      expect(err.message).toContain("Registo não encontrado")
+      expect(err.code).toBe("RECORD_NOT_FOUND")
+    }
+  })
+
+  it("should map unreachable database to 503", () => {
+    const error = {
+      name: "PrismaClientInitializationError",
+      message: "Can't reach database server at `ep-example.aws.neon.tech:5432`",
+    }
+    try {
+      handlePrismaError(error)
+      throw new Error("expected handlePrismaError to throw")
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(ApplicationError)
+      expect(err.statusCode).toBe(503)
+      expect(err.code).toBe("DATABASE_UNREACHABLE")
+      expect(err.message).toContain("ep-example.aws.neon.tech:5432")
+    }
+  })
+
+  it("should map P1001 to 503", () => {
+    try {
+      handlePrismaError({ code: "P1001" })
+      throw new Error("expected handlePrismaError to throw")
+    } catch (err: any) {
+      expect(err.statusCode).toBe(503)
+      expect(err.code).toBe("DATABASE_UNREACHABLE")
     }
   })
 

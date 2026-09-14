@@ -111,18 +111,42 @@ export class BoardingRequestPrismaRepository implements BoardingRequestRepositor
       return await this.prisma.$transaction(
         async (tx) => {
           const trip = await tx.trip.findUnique({ where: { id: input.tripId } })
-          if (!trip) throw new ApplicationError("Viagem não encontrada", 404)
+          if (!trip) {
+            throw new ApplicationError(`Viagem #${input.tripId} não encontrada.`, 404, {
+              code: "TRIP_NOT_FOUND",
+              hint: "Confirme o tripId em GET /api/trips/active.",
+            })
+          }
           if (trip.status !== PrismaTripStatus.ACTIVE) {
-            throw new ApplicationError("A viagem não está ativa", 409)
+            throw new ApplicationError(
+              `Não é possível pedir embarque: a viagem #${input.tripId} está ${trip.status}, não ACTIVE.`,
+              409,
+              {
+                code: "TRIP_NOT_ACTIVE",
+                hint: "Peça embarque apenas enquanto a viagem estiver ACTIVE.",
+              },
+            )
           }
 
           const cadete = await tx.cadetes.findUnique({
             where: { id: input.cadeteId },
             include: { stop: true },
           })
-          if (!cadete) throw new ApplicationError("Cadete não encontrado", 404)
+          if (!cadete) {
+            throw new ApplicationError(`Cadete #${input.cadeteId} não encontrado.`, 404, {
+              code: "CADETE_NOT_FOUND",
+              hint: "O JWT tem de usar o id da tabela Cadetes.",
+            })
+          }
           if (!cadete.stop || cadete.stop.route_id !== trip.route_id) {
-            throw new ApplicationError("A paragem do cadete não pertence à rota desta viagem", 409)
+            throw new ApplicationError(
+              `A paragem do cadete #${input.cadeteId} não pertence à rota #${trip.route_id} da viagem #${trip.id}.`,
+              409,
+              {
+                code: "CADETE_WRONG_ROUTE",
+                hint: "Atualize stop_id em PUT /api/cadetes/:id para uma paragem desta rota.",
+              },
+            )
           }
 
           const approved = await tx.boardingRequest.count({
@@ -132,14 +156,28 @@ export class BoardingRequestPrismaRepository implements BoardingRequestRepositor
             },
           })
           if (approved >= trip.vehicle_capacity) {
-            throw new ApplicationError("A viagem atingiu a capacidade máxima", 409)
+            throw new ApplicationError(
+              `A viagem #${trip.id} atingiu a capacidade máxima (${trip.vehicle_capacity} lugares).`,
+              409,
+              {
+                code: "TRIP_FULL",
+                hint: "Aguarde outra viagem ou fale com o motorista.",
+              },
+            )
           }
 
           const duplicate = await tx.boardingRequest.findFirst({
             where: { trip_id: input.tripId, cadete_id: input.cadeteId },
           })
           if (duplicate) {
-            throw new ApplicationError("Já existe um pedido deste cadete nesta viagem", 409)
+            throw new ApplicationError(
+              `Já existe o pedido #${duplicate.id} (${duplicate.status}) do cadete #${input.cadeteId} nesta viagem.`,
+              409,
+              {
+                code: "DUPLICATE_BOARDING_REQUEST",
+                hint: "Consulte GET /api/boarding-requests/mine?tripId=" + input.tripId,
+              },
+            )
           }
 
           const row = await tx.boardingRequest.create({
@@ -175,7 +213,7 @@ export class BoardingRequestPrismaRepository implements BoardingRequestRepositor
     const rows = await this.prisma.boardingRequest.findMany({
       where: {
         cadete_id: cadeteId,
-        trip_id: tripId !== undefined ? tripId : { not: null },
+        ...(tripId !== undefined ? { trip_id: tripId } : {}),
       },
       include: {
         cadete: { select: { full_name: true, stop: { select: { stop_name: true } } } },
@@ -220,9 +258,29 @@ export class BoardingRequestPrismaRepository implements BoardingRequestRepositor
             where: { id },
             include: { trip: true },
           })
-          if (!request) throw new ApplicationError("Pedido não encontrado", 404)
+          if (!request) throw new ApplicationError(`Pedido de embarque #${id} não encontrado.`, 404, {
+            code: "BOARDING_NOT_FOUND",
+            hint: "Liste pedidos em GET /api/qr/boarding/requests ou GET /api/trips/:tripId/boarding-requests.",
+          })
           if (!request.trip_id || !request.trip) {
-            throw new ApplicationError("Pedido legado sem viagem associada", 409)
+            if (request.status !== PrismaStatus.PENDING && request.status !== status) {
+              throw new ApplicationError(
+                `O pedido #${id} já foi ${request.status}. Pedidos QR sem viagem não podem ser reabertos.`,
+                409,
+                {
+                  code: "BOARDING_ALREADY_DECIDED",
+                  hint: "Crie um novo pedido com scan/admit se precisar de outra decisão.",
+                },
+              )
+            }
+            const row = await tx.boardingRequest.update({
+              where: { id },
+              data: { status: status as PrismaStatus, flagged: false },
+              include: {
+                cadete: { select: { full_name: true, stop: { select: { stop_name: true } } } },
+              },
+            })
+            return this.map(row)
           }
           if (request.status === status) {
             const row = await tx.boardingRequest.findUnique({
@@ -234,10 +292,24 @@ export class BoardingRequestPrismaRepository implements BoardingRequestRepositor
             return this.map(row!)
           }
           if (request.status !== PrismaStatus.PENDING) {
-            throw new ApplicationError("O pedido já foi decidido", 409)
+            throw new ApplicationError(
+              `O pedido #${id} já foi ${request.status}. Não pode voltar a decidir.`,
+              409,
+              {
+                code: "BOARDING_ALREADY_DECIDED",
+                hint: "Só pedidos PENDING podem ser APPROVED ou REJECTED.",
+              },
+            )
           }
           if (request.trip.status !== PrismaTripStatus.ACTIVE) {
-            throw new ApplicationError("A viagem não está ativa", 409)
+            throw new ApplicationError(
+              `Não é possível decidir o pedido #${id}: a viagem #${request.trip_id} está ${request.trip.status}.`,
+              409,
+              {
+                code: "TRIP_NOT_ACTIVE",
+                hint: "Só se decide embarque enquanto a viagem está ACTIVE.",
+              },
+            )
           }
 
           if (status === "APPROVED") {
@@ -245,7 +317,14 @@ export class BoardingRequestPrismaRepository implements BoardingRequestRepositor
               where: { trip_id: request.trip_id, status: PrismaStatus.APPROVED },
             })
             if (approved >= request.trip.vehicle_capacity) {
-              throw new ApplicationError("A viagem atingiu a capacidade máxima", 409)
+              throw new ApplicationError(
+                `A viagem #${request.trip_id} atingiu a capacidade máxima (${request.trip.vehicle_capacity} lugares). Não é possível APPROVED o pedido #${id}.`,
+                409,
+                {
+                  code: "TRIP_FULL",
+                  hint: "Rejeite o pedido ou aumente a capacidade (PATCH /api/trips/:id, ADMIN).",
+                },
+              )
             }
           }
 

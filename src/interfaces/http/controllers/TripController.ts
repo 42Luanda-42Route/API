@@ -3,6 +3,7 @@ import {
   CancelTripUseCase,
   CompleteTripUseCase,
   CreateTripUseCase,
+  DeleteTripUseCase,
   GetActiveTripUseCase,
   GetTripByIdUseCase,
   ListTripsUseCase,
@@ -44,6 +45,7 @@ export class TripController {
     private readonly updateTrip: UpdateTripUseCase,
     private readonly completeTrip: CompleteTripUseCase,
     private readonly cancelTrip: CancelTripUseCase,
+    private readonly deleteTrip: DeleteTripUseCase,
   ) {}
 
   async create(req: FastifyRequest, reply: FastifyReply) {
@@ -62,9 +64,7 @@ export class TripController {
 
   async active(req: FastifyRequest, reply: FastifyReply) {
     try {
-      const trip = await this.getActiveTrip.execute(actorFrom(req))
-      if (!trip) throw new ApplicationError("Não existe uma viagem ativa", 404)
-      return reply.send(trip)
+      return reply.send(await this.getActiveTrip.execute(actorFrom(req)))
     } catch (error) {
       return this.handle(error, reply)
     }
@@ -149,9 +149,18 @@ export class TripController {
     }
   }
 
+  async delete(req: FastifyRequest, reply: FastifyReply) {
+    try {
+      await this.deleteTrip.execute(actorFrom(req), positiveId((req.params as any).id))
+      return reply.status(204).send()
+    } catch (error) {
+      return this.handle(error, reply)
+    }
+  }
+
   private handle(error: unknown, reply: FastifyReply) {
     if (error instanceof ApplicationError) {
-      return reply.status(error.statusCode).send({ error: error.message })
+      return reply.status(error.statusCode).send(error.toPayload())
     }
     reply.log.error(error)
     return reply.status(500).send({ error: "Internal server error" })

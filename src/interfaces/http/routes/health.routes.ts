@@ -25,7 +25,9 @@ export default async function healthRoutes(app: FastifyInstance) {
               status: { type: "string", example: "error" },
               database: { type: "string", example: "disconnected" },
               timestamp: { type: "string", example: "2026-08-13T22:00:00.000Z" },
-              error: { type: "string", example: "Database connection failed" },
+              error: { type: "string" },
+              code: { type: "string" },
+              hint: { type: "string" },
             },
           },
         },
@@ -44,7 +46,9 @@ export default async function healthRoutes(app: FastifyInstance) {
           status: "error",
           database: "disconnected",
           timestamp: new Date().toISOString(),
-          error: error instanceof Error ? error.message : "Database connection failed",
+          error: "A base de dados está inacessível.",
+          code: "DATABASE_UNREACHABLE",
+          hint: "Confirme DATABASE_URL. Se for Neon, acorde o compute no consola. Se for Docker local, use a porta POSTGRES_PORT (5434).",
         })
       }
     },

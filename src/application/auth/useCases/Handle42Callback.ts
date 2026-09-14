@@ -2,7 +2,7 @@ import OAuth2 from "simple-oauth2"
 import { oauthConfig } from "../../../config/oauth42"
 import { CadeteRepository } from "../../../domain/cadetes/CadeteRepository"
 import { ApplicationError } from "../../errors/ApplicationError"
-import { generateToken } from "../../../utils/jwt"
+import { issueAuthTokens } from "../../../utils/jwt"
 
 const client = new OAuth2.AuthorizationCode({
   client: {
@@ -21,7 +21,10 @@ export class Handle42CallbackUseCase {
 
   async execute(code: string) {
     if (!code) {
-      throw new ApplicationError("code is required", 422)
+      throw new ApplicationError("O parâmetro code do Intra 42 é obrigatório.", 422, {
+        code: "OAUTH_CODE_REQUIRED",
+        hint: "Abra GET /api/auth/42/login, autorize na Intra e use o code devolvido em GET /api/auth/42/callback?code=.",
+      })
     }
 
     const tokenParams = {
@@ -73,7 +76,7 @@ export class Handle42CallbackUseCase {
     const hasStop = Boolean(cadete?.stopId)
     const needsOnboarding = !isDBUser || !hasDistrict || !hasStop
 
-    const jwtToken = generateToken(
+    const session = issueAuthTokens(
       {
         id: userId,
         full_name,
@@ -95,7 +98,9 @@ export class Handle42CallbackUseCase {
     )
 
     return {
-      token: jwtToken,
+      token: session.token,
+      refreshToken: session.refreshToken,
+      user: session.user,
       isDBUser,
       needsOnboarding,
       hasDistrict,

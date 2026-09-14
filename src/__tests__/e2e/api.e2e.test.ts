@@ -24,7 +24,9 @@ describe("E2E API Endpoints Test", () => {
       jest.spyOn(app.prisma.admins, "findMany").mockResolvedValue([] as any)
       jest.spyOn(app.prisma.admins, "count").mockResolvedValue(0)
       jest.spyOn(app.prisma.cadetes, "findMany").mockResolvedValue([] as any)
+      jest.spyOn(app.prisma.cadetes, "findUnique").mockResolvedValue(null as any)
       jest.spyOn(app.prisma.cadetes, "count").mockResolvedValue(0)
+      jest.spyOn(app.prisma.drivers, "findUnique").mockResolvedValue(null as any)
       jest.spyOn(app.prisma.drivers, "findMany").mockResolvedValue([] as any)
       jest.spyOn(app.prisma.drivers, "count").mockResolvedValue(0)
       jest.spyOn(app.prisma.route, "findMany").mockResolvedValue([] as any)
@@ -46,6 +48,17 @@ describe("E2E API Endpoints Test", () => {
       jest.spyOn(app.prisma.route, "delete").mockResolvedValue({ id: 1 } as any)
       jest.spyOn(app.prisma.miniBusStop, "findMany").mockResolvedValue([] as any)
       jest.spyOn(app.prisma.miniBusStop, "count").mockResolvedValue(0)
+      jest.spyOn(app.prisma.trip, "count").mockResolvedValue(0)
+      jest.spyOn(app.prisma.trip, "deleteMany").mockResolvedValue({ count: 0 } as any)
+      jest.spyOn(app.prisma.chat, "findMany").mockResolvedValue([] as any)
+      jest.spyOn(app.prisma.chat, "count").mockResolvedValue(0)
+      jest.spyOn(app.prisma, "$transaction").mockImplementation(async (fn: any) =>
+        fn({
+          trip: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+          route: { delete: jest.fn().mockResolvedValue({ id: 1 }) },
+          drivers: { delete: jest.fn().mockResolvedValue({ id: 1 }) },
+        }),
+      )
     }
   })
 
@@ -107,6 +120,26 @@ describe("E2E API Endpoints Test", () => {
     })
   })
 
+  describe("CORS preflight", () => {
+    it("OPTIONS /api/drivers/:id allows PUT, PATCH and DELETE", async () => {
+      const response = await app.inject({
+        method: "OPTIONS",
+        url: "/api/drivers/3",
+        headers: {
+          origin: "http://localhost:5173",
+          "access-control-request-method": "PUT",
+          "access-control-request-headers": "authorization,content-type",
+        },
+      })
+
+      expect(response.statusCode).toBe(204)
+      const allow = String(response.headers["access-control-allow-methods"] || "").toUpperCase()
+      expect(allow).toContain("PUT")
+      expect(allow).toContain("DELETE")
+      expect(allow).toContain("PATCH")
+    })
+  })
+
   describe("Protected Routes Authentication Check", () => {
     it("POST /api/admins should return 401 without token", async () => {
       const response = await app.inject({
@@ -164,7 +197,10 @@ describe("E2E API Endpoints Test", () => {
       })
 
       expect(response.statusCode).toBe(403)
-      expect(JSON.parse(response.body).error).toBe("Forbidden")
+      const body = JSON.parse(response.body)
+      expect(body.code).toBe("FORBIDDEN_ROLE")
+      expect(body.error).toContain("CADETE")
+      expect(body.hint).toBeDefined()
     })
 
     it("allows an admin to update and delete a route", async () => {
@@ -197,11 +233,33 @@ describe("E2E API Endpoints Test", () => {
     })
   })
 
-  describe("GET Public Routes", () => {
+  describe("GET authenticated lists", () => {
+    it("GET /api/cadetes without token returns 401 with a specific message", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/cadetes",
+      })
+      expect(response.statusCode).toBe(401)
+      const body = JSON.parse(response.body)
+      expect(body.code).toBe("UNAUTHORIZED")
+      expect(body.error).toContain("Token")
+    })
+
+    it("GET /api/admins as cadete returns 403", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/admins",
+        headers: { authorization: `Bearer ${cadeteToken}` },
+      })
+      expect(response.statusCode).toBe(403)
+      expect(JSON.parse(response.body).code).toBe("FORBIDDEN_ROLE")
+    })
+
     it("GET /api/admins should return 200 with data list", async () => {
       const response = await app.inject({
         method: "GET",
         url: "/api/admins",
+        headers: { authorization: `Bearer ${adminToken}` },
       })
       expect(response.statusCode).toBe(200)
       const body = JSON.parse(response.body)
@@ -213,6 +271,7 @@ describe("E2E API Endpoints Test", () => {
       const response = await app.inject({
         method: "GET",
         url: "/api/cadetes",
+        headers: { authorization: `Bearer ${cadeteToken}` },
       })
       expect(response.statusCode).toBe(200)
       const body = JSON.parse(response.body)
@@ -224,6 +283,7 @@ describe("E2E API Endpoints Test", () => {
       const response = await app.inject({
         method: "GET",
         url: "/api/drivers",
+        headers: { authorization: `Bearer ${driverToken}` },
       })
       expect(response.statusCode).toBe(200)
       const body = JSON.parse(response.body)
@@ -235,6 +295,7 @@ describe("E2E API Endpoints Test", () => {
       const response = await app.inject({
         method: "GET",
         url: "/api/routes",
+        headers: { authorization: `Bearer ${cadeteToken}` },
       })
       expect(response.statusCode).toBe(200)
       const body = JSON.parse(response.body)
@@ -246,6 +307,19 @@ describe("E2E API Endpoints Test", () => {
       const response = await app.inject({
         method: "GET",
         url: "/api/minibusstops",
+        headers: { authorization: `Bearer ${cadeteToken}` },
+      })
+      expect(response.statusCode).toBe(200)
+      const body = JSON.parse(response.body)
+      expect(body).toHaveProperty("data")
+      expect(body).toHaveProperty("total")
+    })
+
+    it("GET /api/chats should return 200 with data list", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/chats",
+        headers: { authorization: `Bearer ${cadeteToken}` },
       })
       expect(response.statusCode).toBe(200)
       const body = JSON.parse(response.body)
@@ -264,7 +338,8 @@ describe("E2E API Endpoints Test", () => {
 
       expect(response.statusCode).toBe(401)
       const body = JSON.parse(response.body)
-      expect(body.error).toBe("Invalid credentials")
+      expect(body.error).toBe("Credenciais inválidas.")
+      expect(body.code).toBe("INVALID_CREDENTIALS")
     })
   })
 
@@ -278,7 +353,8 @@ describe("E2E API Endpoints Test", () => {
 
       expect(response.statusCode).toBe(401)
       const body = JSON.parse(response.body)
-      expect(body.error).toBe("Invalid credentials")
+      expect(body.error).toBe("Credenciais inválidas.")
+      expect(body.code).toBe("INVALID_CREDENTIALS")
     })
   })
 })

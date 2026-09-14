@@ -79,27 +79,76 @@ export class GetActiveTripUseCase {
     private readonly boardingRequests: BoardingRequestRepository,
   ) {}
 
-  async execute(actor: TripActor): Promise<Trip | null> {
+  async execute(actor: TripActor): Promise<Trip> {
     const role = roleOf(actor)
     if (role === "DRIVER") {
       const trip = await this.trips.findActiveByDriver(actor.id)
+      if (!trip) {
+        throw new ApplicationError(
+          `O motorista #${actor.id} não tem uma viagem ACTIVE.`,
+          404,
+          {
+            code: "NO_ACTIVE_TRIP_FOR_DRIVER",
+            hint: "Inicie uma viagem em POST /api/trips com vehicle_name, vehicle_plate e vehicle_capacity.",
+          },
+        )
+      }
       return trip
     }
     if (role === "CADETE") {
       const routeInfo = await this.cadetes.getRouteInfo(actor.id)
-      if (!routeInfo) throw new ApplicationError("Cadete não encontrado", 404)
+      if (!routeInfo) {
+        throw new ApplicationError(`Cadete #${actor.id} não encontrado.`, 404, {
+          code: "CADETE_NOT_FOUND",
+          hint: "Confirme que o JWT usa o id da tabela Cadetes, não o id da Intra 42.",
+        })
+      }
       const routeId = routeInfo.stop?.route?.id
-      if (!routeId) return null
+      if (!routeId) {
+        throw new ApplicationError(
+          `O cadete #${actor.id} não tem paragem/rota associada, por isso não há viagem ativa.`,
+          404,
+          {
+            code: "CADETE_WITHOUT_ROUTE",
+            hint: "Atualize a paragem em PUT /api/cadetes/:id com { \"stop_id\": <id> }.",
+          },
+        )
+      }
       const trip = await this.trips.findActiveByRoute(routeId)
-      if (!trip) return null
+      if (!trip) {
+        throw new ApplicationError(
+          `Não existe uma viagem ACTIVE na rota #${routeId} do cadete.`,
+          404,
+          {
+            code: "NO_ACTIVE_TRIP_ON_ROUTE",
+            hint: "Aguarde o motorista da rota iniciar a viagem (POST /api/trips).",
+          },
+        )
+      }
       const requests = await this.boardingRequests.listMine(actor.id, trip.id)
       return {
         ...withoutRequests(trip),
         myRequest: requests[0] ?? null,
       }
     }
-    if (role === "ADMIN") return null
-    throw new ApplicationError("Perfil sem permissão", 403)
+    if (role === "ADMIN") {
+      throw new ApplicationError(
+        "Administradores não têm uma viagem ativa própria.",
+        404,
+        {
+          code: "ADMIN_HAS_NO_ACTIVE_TRIP",
+          hint: "Use GET /api/trips?status=ACTIVE para listar as viagens ativas de todos os motoristas.",
+        },
+      )
+    }
+    throw new ApplicationError(
+      `O perfil ${role || "desconhecido"} não pode consultar a viagem ativa.`,
+      403,
+      {
+        code: "FORBIDDEN_ROLE",
+        hint: "Inicie sessão como DRIVER ou CADETE para GET /api/trips/active.",
+      },
+    )
   }
 }
 
@@ -109,7 +158,14 @@ export class ListTripsUseCase {
   async execute(actor: TripActor, filters: TripFilters) {
     const role = roleOf(actor)
     if (!["ADMIN", "DRIVER"].includes(role)) {
-      throw new ApplicationError("Perfil sem permissão para listar viagens", 403)
+      throw new ApplicationError(
+        "Cadetes não podem listar todas as viagens. Só consultam a viagem ativa da própria rota.",
+        403,
+        {
+          code: "CADETE_CANNOT_LIST_TRIPS",
+          hint: "Use GET /api/trips/active ou GET /api/trips/:id da viagem da sua rota.",
+        },
+      )
     }
     if (!Number.isInteger(filters.page) || filters.page < 1) {
       throw new ApplicationError("page deve ser um inteiro positivo", 422)
@@ -162,7 +218,16 @@ export class UpdateTripUseCase {
     tripId: number,
     input: { vehicleName?: string; vehiclePlate?: string; vehicleCapacity?: number },
   ): Promise<Trip> {
-    if (roleOf(actor) !== "ADMIN") throw new ApplicationError("Apenas administradores podem editar viagens", 403)
+    if (roleOf(actor) !== "ADMIN") {
+      throw new ApplicationError(
+        "Apenas administradores podem editar os dados da viatura (PATCH /api/trips/:id).",
+        403,
+        {
+          code: "DRIVER_CANNOT_PATCH_TRIP",
+          hint: "O motorista controla o ciclo com POST /api/trips (criar) e POST /api/trips/:id/complete (terminar).",
+        },
+      )
+    }
     if (Object.values(input).every((value) => value === undefined)) {
       throw new ApplicationError("Informe ao menos um campo para atualizar", 422)
     }
@@ -200,6 +265,24 @@ export class CancelTripUseCase {
     const trip = await this.trips.transition(tripId, "CANCELLED")
     emitTripEvent("trip:updated", trip)
     return trip
+  }
+}
+
+export class DeleteTripUseCase {
+  constructor(private readonly trips: TripRepository) {}
+
+  async execute(actor: TripActor, tripId: number): Promise<void> {
+    if (roleOf(actor) !== "ADMIN") {
+      throw new ApplicationError(
+        "Apenas administradores podem apagar viagens já encerradas.",
+        403,
+        {
+          code: "FORBIDDEN_ROLE",
+          hint: "Motoristas devem usar POST /api/trips/:id/complete. Para remover o histórico, peça a um admin DELETE /api/trips/:id.",
+        },
+      )
+    }
+    await this.trips.delete(tripId)
   }
 }
 

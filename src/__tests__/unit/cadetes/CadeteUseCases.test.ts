@@ -153,6 +153,49 @@ describe("Cadete Use Cases", () => {
       const useCase = new UpdateCadeteUseCase(repo)
       await expect(useCase.execute(99, { full_name: "New" })).rejects.toThrow(ApplicationError)
     })
+
+    it("lets a cadete update their own contact fields", async () => {
+      const existing = {
+        id: 1,
+        fullName: "Old",
+        username: "cadete1",
+        email: "c@c.com",
+        city: null,
+        district: null,
+        priorityList: false,
+        phone: null,
+        stopId: null,
+        createdAt: new Date(),
+      }
+      repo.getById.mockResolvedValue(existing)
+      repo.update.mockResolvedValue({ ...existing, city: "Luanda", stopId: 3 })
+
+      const useCase = new UpdateCadeteUseCase(repo)
+      await expect(
+        useCase.execute(1, { city: "Luanda", stop_id: 3 }, { id: 1, role: "CADETE" }),
+      ).resolves.toMatchObject({ city: "Luanda" })
+    })
+
+    it("blocks a cadete from changing username, email or priorityList", async () => {
+      repo.getById.mockResolvedValue({
+        id: 1,
+        fullName: "Old",
+        username: "cadete1",
+        email: "c@c.com",
+        city: null,
+        district: null,
+        priorityList: false,
+        phone: null,
+        stopId: null,
+        createdAt: new Date(),
+      })
+
+      const useCase = new UpdateCadeteUseCase(repo)
+      await expect(
+        useCase.execute(1, { email: "novo@42.ao" }, { id: 1, role: "CADETE" }),
+      ).rejects.toMatchObject({ statusCode: 403, code: "CADETE_CANNOT_EDIT_FIELD" })
+      expect(repo.update).not.toHaveBeenCalled()
+    })
   })
 
   describe("DeleteCadeteUseCase", () => {
@@ -185,10 +228,23 @@ describe("Cadete Use Cases", () => {
 
   describe("GetCadeteRouteInfoUseCase", () => {
     it("should return route info for cadete", async () => {
-      repo.getRouteInfo.mockResolvedValue({ full_name: "Cadete 1", stop: { stop_name: "Stop 1" } })
+      repo.getRouteInfo.mockResolvedValue({
+        fullName: "Cadete 1",
+        stop: { id: 1, stopName: "Stop 1", route: { id: 3, routeName: "Rota 3", drivers: [] } },
+      })
       const useCase = new GetCadeteRouteInfoUseCase(repo)
       const result = await useCase.execute(1)
-      expect(result).toHaveProperty("full_name")
+      expect(result.fullName).toBe("Cadete 1")
+      expect(result.stop?.route?.routeName).toBe("Rota 3")
+    })
+
+    it("should throw 404 if cadete has no route", async () => {
+      repo.getRouteInfo.mockResolvedValue({ fullName: "Cadete 1", stop: null })
+      const useCase = new GetCadeteRouteInfoUseCase(repo)
+      await expect(useCase.execute(1)).rejects.toMatchObject({
+        statusCode: 404,
+        code: "CADETE_WITHOUT_ROUTE",
+      })
     })
 
     it("should throw 404 if route info not found", async () => {

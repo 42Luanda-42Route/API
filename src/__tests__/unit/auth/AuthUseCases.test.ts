@@ -24,7 +24,7 @@ describe("Auth Use Cases", () => {
         getRouteInfo: jest.fn(),
       }
       const useCase = new Handle42CallbackUseCase(mockRepo)
-      await expect(useCase.execute("")).rejects.toThrow("code is required")
+      await expect(useCase.execute("")).rejects.toThrow("O parâmetro code do Intra 42 é obrigatório.")
     })
   })
 

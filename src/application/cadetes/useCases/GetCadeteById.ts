@@ -7,12 +7,18 @@ export class GetCadeteByIdUseCase {
 
   async execute(id: number): Promise<Cadete> {
     if (!id || Number.isNaN(id)) {
-      throw new ApplicationError("Cadete id must be valid", 422)
+      throw new ApplicationError("O id do cadete deve ser um inteiro positivo.", 422, {
+        code: "INVALID_CADETE_ID",
+        hint: "Use GET /api/cadetes/:id com um id numérico.",
+      })
     }
 
     const cadete = await this.repo.getById(id)
     if (!cadete) {
-      throw new ApplicationError("Cadete not found", 404)
+      throw new ApplicationError(`Cadete #${id} não encontrado.`, 404, {
+        code: "CADETE_NOT_FOUND",
+        hint: "Liste cadetes em GET /api/cadetes e confirme o id.",
+      })
     }
 
     return cadete

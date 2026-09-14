@@ -115,7 +115,31 @@ export class CadetePrismaRepository implements CadeteRepository {
       },
     })
 
-    return cadete
+    if (!cadete) return null
+
+    return {
+      fullName: cadete.full_name,
+      stop: cadete.stop
+        ? {
+            id: cadete.stop.id,
+            stopName: cadete.stop.stop_name,
+            district: cadete.stop.district,
+            latitude: cadete.stop.latitude,
+            longitude: cadete.stop.longitude,
+            route: cadete.stop.route
+              ? {
+                  id: cadete.stop.route.id,
+                  routeName: cadete.stop.route.route_name,
+                  description: cadete.stop.route.description,
+                  drivers: cadete.stop.route.drivers.map((driver) => ({
+                    fullName: driver.full_name,
+                    phone: driver.phone,
+                  })),
+                }
+              : null,
+          }
+        : null,
+    }
   }
 
   private map(cadete: any): Cadete {

@@ -7,6 +7,7 @@ import { DeleteCadeteUseCase } from "../../../application/cadetes/useCases/Delet
 import { GetCadeteRouteInfoUseCase } from "../../../application/cadetes/useCases/GetCadeteRouteInfo"
 import { ApplicationError } from "../../../application/errors/ApplicationError"
 import { CreateCadeteInput, UpdateCadeteInput } from "../../../application/cadetes/dto"
+import { JWTPayload } from "../../../utils/jwt"
 
 export class CadeteController {
   constructor(
@@ -49,7 +50,11 @@ export class CadeteController {
 
   async update(req: FastifyRequest<{ Params: { id: string }; Body: UpdateCadeteInput }>, reply: FastifyReply) {
     try {
-      const result = await this.updateCadete.execute(Number(req.params.id), req.body)
+      const user = req.user as JWTPayload
+      const result = await this.updateCadete.execute(Number(req.params.id), req.body, {
+        id: Number(user.id),
+        role: user.role,
+      })
       return reply.send(result)
     } catch (error) {
       return this.handle(error, reply)
@@ -76,7 +81,7 @@ export class CadeteController {
 
   private handle(error: unknown, reply: FastifyReply) {
     if (error instanceof ApplicationError) {
-      return reply.status(error.statusCode).send({ error: error.message })
+      return reply.status(error.statusCode).send(error.toPayload())
     }
     reply.log.error(error)
     return reply.status(500).send({ error: "Internal server error" })
