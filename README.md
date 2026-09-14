@@ -305,7 +305,24 @@ Todas as rotas REST possuem o prefixo base `/api`.
 - `PUT /api/admins/:id` — Atualizar administrador *(requer ADMIN)*
 - `DELETE /api/admins/:id` — Remover administrador *(requer ADMIN)*
 
-### 7. Saúde do Sistema (`/api/health`)
+### 7. Viagens e embarques (`/api/trips`)
+- `POST /api/trips` — Motorista cria e inicia uma viagem na sua rota atual
+- `GET /api/trips/active` — Obtém a viagem ativa do motorista ou da rota do cadete
+- `GET /api/trips` — Lista viagens com filtros e paginação *(requer ADMIN ou DRIVER)*
+- `GET /api/trips/:id` — Detalhe, ocupação e pedidos da viagem
+- `PATCH /api/trips/:id` — Atualiza os dados textuais da viatura *(requer ADMIN)*
+- `POST /api/trips/:id/complete` — Conclui uma viagem *(motorista proprietário ou ADMIN)*
+- `POST /api/trips/:id/cancel` — Cancela uma viagem *(requer ADMIN)*
+- `POST /api/trips/:tripId/boarding-requests` — Cadete solicita embarque sem QR
+- `GET /api/trips/:tripId/boarding-requests` — Lista pedidos da viagem
+- `GET /api/boarding-requests/mine` — Cadete consulta os seus pedidos
+- `PATCH /api/boarding-requests/:id` — Motorista ou ADMIN aprova/rejeita um pedido
+
+Só pode existir uma viagem ativa por rota e por motorista. A aprovação respeita a
+capacidade da viatura e todos os pedidos são persistidos antes da notificação em
+tempo real.
+
+### 8. Saúde do Sistema (`/api/health`)
 - `GET /api/health` — Verifica status da API e conectividade com o PostgreSQL
 
 ---
@@ -328,8 +345,8 @@ const socket = io("http://localhost:3000", {
 - `driver:joinRoute` — `{ driverId: number }`: Motorista entra na sala de sua rota atribuída; `DRIVER` só pode usar o próprio ID, enquanto `ADMIN` pode operar qualquer motorista.
 - `driver:leaveRoute` — `{ driverId: number }`: Motorista sai da sala e emite `driver:inactive`, com a mesma regra de identidade.
 - `driver:updateLocation` — `{ id_driver: number, lat: number, long: number }`: Atualiza coordenadas; `DRIVER` só pode atualizar a si mesmo, enquanto `ADMIN` pode atualizar qualquer motorista.
-- `cadete:joinRoute` — `{ cadeteId?: number, routeId?: number }`: Cadete junta-se à sala da rota.
-- `cadete:updateLocation` — `{ cadeteId: number, lat: number, long: number }`: Atualiza coordenadas caso o motorista esteja inativo.
+- `cadete:joinRoute` — `{ cadeteId?: number, routeId?: number }`: Cadete junta-se apenas à sua própria rota, validada pelo JWT.
+- `cadete:updateLocation` — `{ cadeteId: number, lat: number, long: number }`: Atualiza as próprias coordenadas caso o motorista esteja inativo.
 - `route:subscribe` — `{ routeId: number }`: `ADMIN` entra explicitamente na sala de uma rota; confirma com `route:subscribed`.
 - `route:unsubscribe` — `{ routeId: number }`: `ADMIN` sai explicitamente da sala; confirma com `route:unsubscribed`.
 
@@ -337,6 +354,9 @@ const socket = io("http://localhost:3000", {
 - `driver:location` — Dados de localização em tempo real do motorista.
 - `transport:location` — Dados de localização emitidos por um cadete (modo fallback).
 - `driver:inactive` — Notifica que não há motorista ativo no momento na rota.
+- `trip:created` / `trip:updated` — Criação ou alteração do estado da viagem.
+- `boarding:request:created` — Novo pedido enviado ao motorista proprietário e aos administradores.
+- `boarding:request:updated` — Decisão enviada ao cadete, motorista e administradores.
 - `socket:error` — Notificações de erro ou validação.
 
 ---
