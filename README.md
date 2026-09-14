@@ -149,7 +149,7 @@ Se tiver o Docker instalado, você pode iniciar apenas o serviço do PostgreSQL 
 docker compose up -d postgres
 ```
 
-> **Nota:** Caso utilize uma instalação local do PostgreSQL fora do Docker, certifique-se de que a string de conexão no `DATABASE_URL` do `.env` está correta e que o banco existe.
+> **Nota:** O Postgres do compose usa `42route` / `42route123` / `42route_db`. A porta no host vem de `POSTGRES_PORT` (default `5432`). Se essa porta já estiver ocupada, define `POSTGRES_PORT=5434` e o mesmo host no `DATABASE_URL`. Fora do Docker, a string de conexão tem de coincidir com o servidor real.
 
 #### 5. Executar as migrações do Prisma
 
@@ -215,7 +215,8 @@ Abaixo estão descritas as variáveis necessárias para a execução da API:
 
 | Variável | Descrição | Exemplo Padrão |
 | --- | --- | --- |
-| `DATABASE_URL` | String de conexão PostgreSQL para o Prisma | `postgresql://42route:42route123@localhost:5432/42route_db?sslmode=disable` |
+| `DATABASE_URL` | String de conexão PostgreSQL para o Prisma (host = `POSTGRES_PORT`) | `postgresql://42route:42route123@localhost:5434/42route_db?sslmode=disable` |
+| `POSTGRES_PORT` | Porta no host para o Postgres do Docker Compose (dentro da rede Docker continua `5432`) | `5434` |
 | `PORT` | Porta onde o servidor HTTP/WebSocket escuta | `3000` |
 | `NODE_ENV` | Ambiente de execução (`development`, `production`, `test`) | `development` |
 | `APP_URL` | URL base pública da aplicação | `http://localhost:3000` |
