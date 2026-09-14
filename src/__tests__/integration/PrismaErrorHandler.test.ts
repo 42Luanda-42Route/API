@@ -38,8 +38,7 @@ describe("PrismaErrorHandler", () => {
   it("should map unreachable database to 503", () => {
     const error = {
       name: "PrismaClientInitializationError",
-      message: "Can't reach database server at `example:5432`",
-      errorCode: "P1001",
+      message: "Can't reach database server at `ep-example.aws.neon.tech:5432`",
     }
     try {
       handlePrismaError(error)
@@ -47,7 +46,18 @@ describe("PrismaErrorHandler", () => {
     } catch (err: any) {
       expect(err).toBeInstanceOf(ApplicationError)
       expect(err.statusCode).toBe(503)
-      expect(err.code).toBe("DATABASE_UNAVAILABLE")
+      expect(err.code).toBe("DATABASE_UNREACHABLE")
+      expect(err.message).toContain("ep-example.aws.neon.tech:5432")
+    }
+  })
+
+  it("should map P1001 to 503", () => {
+    try {
+      handlePrismaError({ code: "P1001" })
+      throw new Error("expected handlePrismaError to throw")
+    } catch (err: any) {
+      expect(err.statusCode).toBe(503)
+      expect(err.code).toBe("DATABASE_UNREACHABLE")
     }
   })
 

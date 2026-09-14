@@ -8,37 +8,48 @@ function fieldList(error: { meta?: { target?: string[] | string; field_name?: st
   return "campo único"
 }
 
-/**
- * Maps known Prisma errors to specific ApplicationErrors.
- */
+function prismaHost(message: string): string | undefined {
+  const match = message.match(/at `([^`]+)`/)
+  return match?.[1]
+}
+
 function isDatabaseUnreachable(error: {
+  name?: string
   code?: string
   errorCode?: string
-  name?: string
   message?: string
 }): boolean {
   const code = error.code || error.errorCode
-  if (code === "P1001" || code === "P1017" || code === "P1000") return true
+  if (["P1000", "P1001", "P1002", "P1017"].includes(String(code))) return true
   if (error.name === "PrismaClientInitializationError") return true
-  return typeof error.message === "string" && error.message.includes("Can't reach database server")
+  const message = String(error.message || "")
+  return /Can't reach database server|timed out fetching a new connection|Server has closed the connection|Connection refused/i.test(
+    message,
+  )
 }
 
+/**
+ * Maps known Prisma errors to specific ApplicationErrors.
+ */
 export function handlePrismaError(error: unknown): never {
   const prismaError = error as {
+    name?: string
     code?: string
     errorCode?: string
-    name?: string
     message?: string
     meta?: { target?: string[] | string; field_name?: string; model_name?: string }
   }
 
   if (isDatabaseUnreachable(prismaError)) {
+    const host = prismaHost(String(prismaError.message || ""))
     throw new ApplicationError(
-      "Não foi possível ligar à base de dados. Tente novamente dentro de alguns segundos.",
+      host
+        ? `A base de dados em ${host} está inacessível. O login e as restantes operações não podem ser concluídos.`
+        : "A base de dados está inacessível. O login e as restantes operações não podem ser concluídos.",
       503,
       {
-        code: "DATABASE_UNAVAILABLE",
-        hint: "O Postgres remoto pode estar a acordar após inatividade. Repita o pedido.",
+        code: "DATABASE_UNREACHABLE",
+        hint: "Confirme DATABASE_URL no .env. Neon tem de estar acordado; em local use o Postgres do docker-compose (porta POSTGRES_PORT, por omissão 5434). Depois reinicie a API.",
       },
     )
   }

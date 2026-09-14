@@ -7,6 +7,7 @@ import { RefreshTokenInput, RefreshTokenUseCase } from "../../../application/aut
 import { ApplicationError } from "../../../application/errors/ApplicationError"
 import { LoginDriverInput } from "../../../application/drivers/dto"
 import { LoginAdminInput } from "../../../application/admins/dto"
+import { handlePrismaError } from "../../../infrastructure/errors/PrismaErrorHandler"
 
 export class AuthController {
   constructor(
@@ -91,7 +92,18 @@ export class AuthController {
     if (error instanceof ApplicationError) {
       return reply.status(error.statusCode).send(error.toPayload())
     }
+    try {
+      handlePrismaError(error)
+    } catch (mapped) {
+      if (mapped instanceof ApplicationError) {
+        return reply.status(mapped.statusCode).send(mapped.toPayload())
+      }
+    }
     reply.log.error(error)
-    return reply.status(500).send({ error: "Internal server error" })
+    return reply.status(500).send({
+      error: "Erro interno do servidor.",
+      code: "INTERNAL_ERROR",
+      hint: "Veja os logs da API. Se a base de dados estiver em baixo, GET /api/health devolve 503.",
+    })
   }
 }

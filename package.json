@@ -6,6 +6,7 @@
   "scripts": {
     "build": "prisma generate && tsc",
     "start": "node dist/main.js",
+    "seed": "ts-node prisma/seed.ts",
     "start:prod": "npm run build && node dist/main.js",
     "generate:schema": "npx prisma generate",
     "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
@@ -64,6 +65,6 @@
     "typescript": "^5.9.2"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed"
+    "seed": "ts-node prisma/seed.ts"
   }
 }

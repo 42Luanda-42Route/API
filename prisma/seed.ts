@@ -24,6 +24,8 @@ function generateLuandaCoordinates() {
 async function cleanDatabase() {
   await prisma.message.deleteMany();
   await prisma.chat.deleteMany();
+  await prisma.boardingRequest.deleteMany();
+  await prisma.trip.deleteMany();
   await prisma.driverCoordinates.deleteMany();
   await prisma.cadetes.deleteMany();
   await prisma.drivers.deleteMany();
@@ -71,7 +73,7 @@ async function seedStops(routes: Array<{ id: number; route_name: string }>) {
       const stop = await prisma.miniBusStop.create({
         data: {
           stop_name: `${route.route_name} - Paragem ${i}`,
-          distrit: faker.helpers.arrayElement([
+          district: faker.helpers.arrayElement([
             "Maianga",
             "Ingombota",
             "Samba",
@@ -106,7 +108,7 @@ async function seedDrivers(
         full_name: faker.person.fullName(),
         username: `driver_${i + 1}`,
         email: `driver_${i + 1}@42route.com`,
-        passwrd: passwordHash,
+        password: passwordHash,
         phone: faker.number.int({ min: 900000000, max: 999999999 }),
         photo: `https://api.dicebear.com/9.x/identicon/svg?seed=driver_${i + 1}`,
         current_route_id: route.id,
@@ -141,7 +143,7 @@ async function seedCadetes(stops: Array<{ id: number }>) {
         username: `cadete_${i + 1}`,
         email: `cadete_${i + 1}@student.42luanda.ao`,
         city: "Luanda",
-        distrit: faker.helpers.arrayElement([
+        district: faker.helpers.arrayElement([
           "Maianga",
           "Ingombota",
           "Samba",
@@ -150,7 +152,7 @@ async function seedCadetes(stops: Array<{ id: number }>) {
           "Cazenga",
         ]),
         phone: faker.number.int({ min: 900000000, max: 999999999 }),
-        prioritityList: i % 5 === 0,
+        priorityList: i % 5 === 0,
         stop_id: stop.id,
       },
     });
@@ -198,13 +200,13 @@ async function seedChatsAndMessages(
         {
           chat_id: generalChat.id,
           sender_id: firstDriver.id,
-          senderType: 1,
+          senderType: "DRIVER",
           content: "Bem-vindos ao canal geral do 42Route.",
         },
         {
           chat_id: generalChat.id,
           sender_id: firstCadete.id,
-          senderType: 0,
+          senderType: "CADETE",
           content: "Obrigado. Sistema de rotas operacional.",
         },
       ],
@@ -222,13 +224,13 @@ async function seedChatsAndMessages(
         {
           chat_id: routeChat.id,
           sender_id: driver.id,
-          senderType: 1,
+          senderType: "DRIVER",
           content: `Motorista ativo na rota ${routeChat.route_id}.`,
         },
         {
           chat_id: routeChat.id,
           sender_id: cadete.id,
-          senderType: 0,
+          senderType: "CADETE",
           content: `Cadete aguardando transporte na rota ${routeChat.route_id}.`,
         },
       ],
