@@ -15,9 +15,4 @@ export interface BoardingRequestRepository {
     driverId: number
     routeId: number
   }): Promise<BoardingRequest>
-  createForTrip(input: { tripId: number; cadeteId: number }): Promise<BoardingRequest>
-  listMine(cadeteId: number, tripId?: number): Promise<BoardingRequest[]>
-  listForTrip(tripId: number, status?: BoardingRequestStatus): Promise<BoardingRequest[]>
-  findById(id: number): Promise<BoardingRequest | null>
-  decideForTrip(id: number, status: Exclude<BoardingRequestStatus, "PENDING">): Promise<BoardingRequest>
 }
