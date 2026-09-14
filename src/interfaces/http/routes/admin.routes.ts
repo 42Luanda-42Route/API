@@ -19,13 +19,14 @@ export default async function adminRoutes(app: FastifyInstance) {
     new LoginAdminUseCase(repo),
   )
 
-  // Public routes
   app.get(
     "/admins",
     {
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Admins"],
         summary: "Listar administradores",
+        security: [{ bearerAuth: [] }],
         description: "Retorna uma lista paginada de todos os administradores cadastrados no sistema (senhas omitidas).",
         querystring: {
           type: "object",
@@ -66,9 +67,11 @@ export default async function adminRoutes(app: FastifyInstance) {
   app.get(
     "/admins/:id",
     {
+      preHandler: [app.authorizeRoles("ADMIN")],
       schema: {
         tags: ["Admins"],
         summary: "Obter administrador por ID",
+        security: [{ bearerAuth: [] }],
         description: "Retorna os detalhes de um administrador específico pelo seu ID.",
         params: {
           type: "object",

@@ -179,6 +179,27 @@ export class TripPrismaRepository implements TripRepository {
     })
   }
 
+  async delete(id: number): Promise<void> {
+    const existing = await this.prisma.trip.findUnique({ where: { id } })
+    if (!existing) {
+      throw new ApplicationError(`Viagem #${id} não encontrada. Não é possível apagar.`, 404, {
+        code: "TRIP_NOT_FOUND",
+        hint: "Liste viagens em GET /api/trips e confirme o id.",
+      })
+    }
+    if (existing.status === PrismaTripStatus.ACTIVE) {
+      throw new ApplicationError(
+        `Não é possível apagar a viagem #${id} enquanto estiver ACTIVE.`,
+        409,
+        {
+          code: "TRIP_STILL_ACTIVE",
+          hint: "Conclua com POST /api/trips/:id/complete (motorista dono ou admin) ou cancele com POST /api/trips/:id/cancel (admin).",
+        },
+      )
+    }
+    await this.prisma.trip.delete({ where: { id } })
+  }
+
   private map(row: any): Trip {
     const requests = (row.boardingRequests || []).map((request: any) => this.mapBoarding(request))
     const counts = {

@@ -7,6 +7,7 @@ import { ListRoutesUseCase } from "../../../application/routes/useCases/ListRout
 import { GetRouteByIdUseCase } from "../../../application/routes/useCases/GetRouteById"
 import { UpdateRouteUseCase } from "../../../application/routes/useCases/UpdateRoute"
 import { DeleteRouteUseCase } from "../../../application/routes/useCases/DeleteRoute"
+import { errorPayloadProperties } from "../schemas/errorPayload"
 
 export default async function routeRoutes(app: FastifyInstance) {
   const routeRepository = new RoutePrismaRepository(app.prisma)
@@ -19,13 +20,14 @@ export default async function routeRoutes(app: FastifyInstance) {
     new DeleteRouteUseCase(routeRepository),
   )
 
-  // Public routes
   app.get(
     "/routes",
     {
+      preHandler: [app.authenticate],
       schema: {
         tags: ["Routes"],
         summary: "Listar rotas de transporte",
+        security: [{ bearerAuth: [] }],
         description: "Retorna a lista paginada de todas as rotas com as suas paragens e motoristas associados.",
         querystring: {
           type: "object",
@@ -89,9 +91,11 @@ export default async function routeRoutes(app: FastifyInstance) {
   app.get(
     "/routes/:id",
     {
+      preHandler: [app.authenticate],
       schema: {
         tags: ["Routes"],
         summary: "Obter rota por ID",
+        security: [{ bearerAuth: [] }],
         description: "Retorna os detalhes completos de uma rota incluindo paragens e motoristas vinculados.",
         params: {
           type: "object",
@@ -238,17 +242,17 @@ export default async function routeRoutes(app: FastifyInstance) {
           401: {
             description: "Token em falta ou inválido",
             type: "object",
-            properties: { error: { type: "string" }, message: { type: "string" } },
+            properties: errorPayloadProperties,
           },
           403: {
             description: "Perfil sem permissão administrativa",
             type: "object",
-            properties: { error: { type: "string" }, message: { type: "string" } },
+            properties: errorPayloadProperties,
           },
           404: {
             description: "Rota não encontrada",
             type: "object",
-            properties: { error: { type: "string", example: "Route not found" } },
+            properties: errorPayloadProperties,
           },
         },
       },
@@ -277,17 +281,17 @@ export default async function routeRoutes(app: FastifyInstance) {
           401: {
             description: "Token em falta ou inválido",
             type: "object",
-            properties: { error: { type: "string" }, message: { type: "string" } },
+            properties: errorPayloadProperties,
           },
           403: {
             description: "Perfil sem permissão administrativa",
             type: "object",
-            properties: { error: { type: "string" }, message: { type: "string" } },
+            properties: errorPayloadProperties,
           },
           404: {
             description: "Rota não encontrada",
             type: "object",
-            properties: { error: { type: "string", example: "Route not found" } },
+            properties: errorPayloadProperties,
           },
         },
       },

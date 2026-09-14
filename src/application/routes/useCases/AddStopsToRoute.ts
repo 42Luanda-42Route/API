@@ -8,15 +8,24 @@ export class AddStopsToRouteUseCase {
 
   async execute(input: AddStopsInput): Promise<RouteWithRelations> {
     if (!input.routeId || Number.isNaN(input.routeId)) {
-      throw new ApplicationError("routeId must be a valid number", 422)
+      throw new ApplicationError("O routeId deve ser um inteiro positivo.", 422, {
+        code: "INVALID_ROUTE_ID",
+        hint: "Use POST /api/routes/:id/stops com um id de rota válido.",
+      })
     }
     if (!input.stopIds?.length) {
-      throw new ApplicationError("At least one stopId is required", 422)
+      throw new ApplicationError("É necessário enviar pelo menos um stopId.", 422, {
+        code: "STOP_IDS_REQUIRED",
+        hint: "Envie { \"stopIds\": [1, 2] } com ids de paragens existentes.",
+      })
     }
 
     const route = await this.routeRepository.addStops(input.routeId, input.stopIds)
     if (!route) {
-      throw new ApplicationError("Route not found", 404)
+      throw new ApplicationError(`Rota #${input.routeId} não encontrada. Não é possível associar paragens.`, 404, {
+        code: "ROUTE_NOT_FOUND",
+        hint: "Liste rotas em GET /api/routes e confirme o id.",
+      })
     }
 
     return route

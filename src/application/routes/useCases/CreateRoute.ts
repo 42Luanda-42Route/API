@@ -8,7 +8,10 @@ export class CreateRouteUseCase {
 
   async execute(input: CreateRouteInput): Promise<Route> {
     if (!input.routeName?.trim()) {
-      throw new ApplicationError("routeName is required", 422)
+      throw new ApplicationError("O campo routeName é obrigatório e não pode estar vazio.", 422, {
+        code: "ROUTE_NAME_REQUIRED",
+        hint: "Envie { \"routeName\": \"Rota Kinaxixi - 42 Luanda\" } em POST /api/routes.",
+      })
     }
 
     return this.routeRepository.create({

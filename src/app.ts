@@ -19,6 +19,7 @@ import routeRoutes from "./interfaces/http/routes/route.routes"
 import healthRoutes from "./interfaces/http/routes/health.routes"
 import qrRoutes from "./interfaces/http/routes/qr.routes"
 import tripRoutes from "./interfaces/http/routes/trip.routes"
+import chatRoutes from "./interfaces/http/routes/chat.routes"
 
 export async function buildApp() {
   const app = Fastify({
@@ -31,10 +32,18 @@ export async function buildApp() {
   })
 
   const origin = env.CORS_ORIGINS === "*" ? "*" : env.CORS_ORIGINS.split(",").map((o) => o.trim())
-  await app.register(cors, { origin })
+  await app.register(cors, {
+    origin,
+    // @fastify/cors v11 defaults to GET,HEAD,POST only — browsers then
+    // swallow PUT/PATCH/DELETE after a 204 preflight.
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
+    credentials: origin !== "*",
+  })
 
   await app.register(helmet, {
     contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 
   await app.register(rateLimit, {
@@ -70,6 +79,7 @@ export async function buildApp() {
         { name: "Trips", description: "Execuções de viagens, viaturas e ciclo operacional" },
         { name: "Boarding", description: "Pedidos de embarque sem QR e decisões do motorista" },
         { name: "QR", description: "Leitura de QR de rota (motorista) e QR dinâmico de embarque/elegibilidade (cadete)" },
+        { name: "Chats", description: "Chats GENERAL/ROUTE e mensagens entre cadetes, motoristas e administradores" },
         { name: "Health", description: "Verificação de Saúde da API e Conectividade com a Base de Dados" },
       ],
       components: {
@@ -183,6 +193,7 @@ export async function buildApp() {
   app.register(minibusstopsRoutes, { prefix: "/api" })
   app.register(qrRoutes, { prefix: "/api" })
   app.register(tripRoutes, { prefix: "/api" })
+  app.register(chatRoutes, { prefix: "/api" })
 
   return app
 }

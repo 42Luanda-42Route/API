@@ -11,4 +11,5 @@ export interface TripRepository {
     data: { vehicleName?: string; vehiclePlate?: string; vehicleCapacity?: number },
   ): Promise<Trip>
   transition(id: number, status: Exclude<TripStatus, "ACTIVE">): Promise<Trip>
+  delete(id: number): Promise<void>
 }

@@ -39,20 +39,40 @@ export class ScanBoardingQrUseCase {
 
   async execute(input: ScanBoardingQrInput): Promise<BoardingEligibilityResult> {
     if (input.role !== "CADETE") {
-      throw new ApplicationError("Apenas cadetes podem validar embarque por QR", 403)
+      throw new ApplicationError(
+        `O perfil ${input.role || "desconhecido"} não pode validar embarque por QR.`,
+        403,
+        {
+          code: "FORBIDDEN_ROLE",
+          hint: "Autentique-se como CADETE em POST /api/qr/boarding/scan.",
+        },
+      )
     }
     if (!input.cadeteId || Number.isNaN(input.cadeteId)) {
-      throw new ApplicationError("Cadete id must be valid", 422)
+      throw new ApplicationError("O id do cadete deve ser um inteiro positivo.", 422, {
+        code: "INVALID_CADETE_ID",
+        hint: "O JWT do cadete deve ter o id da tabela Cadetes.",
+      })
     }
     if (!input.qr) {
-      throw new ApplicationError("qr is required", 422)
+      throw new ApplicationError("O campo qr é obrigatório.", 422, {
+        code: "QR_REQUIRED",
+        hint: "Envie { \"qr\": \"<QR dinâmico do motorista>\" }.",
+      })
     }
 
     const payload = this.decode(input.qr)
     const routeInfo = await this.cadetes.getRouteInfo(input.cadeteId)
     if (!routeInfo) {
-      throw new ApplicationError("Cadete não encontrado", 404)
+      throw new ApplicationError(`Cadete #${input.cadeteId} não encontrado.`, 404, {
+        code: "CADETE_NOT_FOUND",
+        hint: "Confirme o id do JWT em GET /api/cadetes/:id.",
+      })
     }
+
+    const cadeteName = routeInfo.fullName ?? routeInfo.full_name ?? null
+    const cadeteRoute = routeInfo.stop?.route
+    const cadeteRouteName = cadeteRoute?.routeName ?? cadeteRoute?.route_name
 
     const now = Math.floor(Date.now() / 1000)
     if (now > payload.exp) {
@@ -61,11 +81,11 @@ export class ScanBoardingQrUseCase {
         pending: false,
         flagged: false,
         reason: "QR code expirado, peça ao motorista para gerar um novo",
-        cadete: { id: input.cadeteId, fullName: routeInfo.full_name ?? null },
+        cadete: { id: input.cadeteId, fullName: cadeteName },
       }
     }
 
-    const cadeteRouteId: number | null = routeInfo.stop?.route?.id ?? null
+    const cadeteRouteId: number | null = cadeteRoute?.id ?? null
     const eligible = cadeteRouteId !== null && cadeteRouteId === payload.routeId
 
     if (!eligible) {
@@ -74,9 +94,9 @@ export class ScanBoardingQrUseCase {
         pending: false,
         flagged: false,
         reason: "Este cadete não está atribuído à rota deste motorista",
-        cadete: { id: input.cadeteId, fullName: routeInfo.full_name ?? null },
-        route: routeInfo.stop?.route
-          ? { id: routeInfo.stop.route.id, routeName: routeInfo.stop.route.route_name }
+        cadete: { id: input.cadeteId, fullName: cadeteName },
+        route: cadeteRoute
+          ? { id: cadeteRoute.id, routeName: cadeteRouteName }
           : undefined,
       }
     }
@@ -105,9 +125,9 @@ export class ScanBoardingQrUseCase {
       reason: created
         ? "Pedido enviado ao motorista — aguarda aprovação"
         : "Já existe um pedido pendente para este motorista",
-      cadete: { id: input.cadeteId, fullName: routeInfo.full_name ?? null },
-      route: routeInfo.stop?.route
-        ? { id: routeInfo.stop.route.id, routeName: routeInfo.stop.route.route_name }
+      cadete: { id: input.cadeteId, fullName: cadeteName },
+      route: cadeteRoute
+        ? { id: cadeteRoute.id, routeName: cadeteRouteName }
         : undefined,
     }
   }
@@ -117,16 +137,25 @@ export class ScanBoardingQrUseCase {
     try {
       raw = decryptQrPayload(qr)
     } catch {
-      throw new ApplicationError("QR code inválido ou corrompido", 422)
+      throw new ApplicationError("QR de embarque inválido ou corrompido.", 422, {
+        code: "INVALID_QR",
+        hint: "Peça ao motorista para gerar um novo QR em POST /api/qr/boarding/generate.",
+      })
     }
     let payload: BoardingQrPayload
     try {
       payload = JSON.parse(raw)
     } catch {
-      throw new ApplicationError("QR code inválido ou corrompido", 422)
+      throw new ApplicationError("QR de embarque inválido ou corrompido.", 422, {
+        code: "INVALID_QR",
+        hint: "O payload deve ser JSON { \"type\": \"boarding\", \"routeId\": <id>, \"driverId\": <id> }.",
+      })
     }
     if (payload.type !== "boarding" || !payload.routeId || !payload.driverId || !payload.exp) {
-      throw new ApplicationError("QR code não corresponde a um embarque válido", 422)
+      throw new ApplicationError("Este QR não corresponde a um embarque válido.", 422, {
+        code: "QR_NOT_BOARDING",
+        hint: "Use o QR dinâmico do motorista (type=boarding), não o QR de rota ou de cadete.",
+      })
     }
     return payload
   }

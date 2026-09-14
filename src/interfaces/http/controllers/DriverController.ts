@@ -9,6 +9,7 @@ import { AssignRouteUseCase } from "../../../application/drivers/useCases/Assign
 import { LeaveRouteUseCase } from "../../../application/drivers/useCases/LeaveRoute"
 import { LoginDriverUseCase } from "../../../application/drivers/useCases/LoginDriver"
 import { ApplicationError } from "../../../application/errors/ApplicationError"
+import { JWTPayload } from "../../../utils/jwt"
 import {
   AssignRouteInput,
   CreateDriverInput,
@@ -62,7 +63,11 @@ export class DriverController {
 
   async update(req: FastifyRequest<{ Params: { id: string }; Body: UpdateDriverInput }>, reply: FastifyReply) {
     try {
-      const result = await this.updateDriver.execute(Number(req.params.id), req.body)
+      const user = req.user as JWTPayload
+      const result = await this.updateDriver.execute(Number(req.params.id), req.body, {
+        id: Number(user.id),
+        role: user.role,
+      })
       const { password, ...safe } = result as any
       return reply.send(safe)
     } catch (error) {
@@ -170,7 +175,7 @@ export class DriverController {
 
   private handle(error: unknown, reply: FastifyReply) {
     if (error instanceof ApplicationError) {
-      return reply.status(error.statusCode).send({ error: error.message })
+      return reply.status(error.statusCode).send(error.toPayload())
     }
     reply.log.error(error)
     return reply.status(500).send({ error: "Internal server error" })

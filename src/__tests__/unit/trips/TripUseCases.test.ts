@@ -1,6 +1,7 @@
 import {
   CompleteTripUseCase,
   CreateTripUseCase,
+  DeleteTripUseCase,
   GetActiveTripUseCase,
 } from "../../../application/trips/useCases/TripUseCases"
 import {
@@ -65,6 +66,7 @@ describe("Trip and direct boarding use cases", () => {
       list: jest.fn(),
       updateVehicle: jest.fn(),
       transition: jest.fn(),
+      delete: jest.fn(),
     }
     drivers = {
       getById: jest.fn(),
@@ -136,8 +138,26 @@ describe("Trip and direct boarding use cases", () => {
       requests,
     ).execute({ id: 11, role: "CADETE" })
 
-    expect(result?.myRequest).toEqual(request)
-    expect(result?.boardingRequests).toBeUndefined()
+    expect(result.myRequest).toEqual(request)
+    expect(result.boardingRequests).toBeUndefined()
+  })
+
+  it("tells admins they have no personal active trip", async () => {
+    await expect(
+      new GetActiveTripUseCase(cadetes, trips, requests).execute({ id: 1, role: "ADMIN" }),
+    ).rejects.toMatchObject({ statusCode: 404, code: "ADMIN_HAS_NO_ACTIVE_TRIP" })
+  })
+
+  it("only lets an admin delete a finished trip", async () => {
+    trips.delete.mockResolvedValue(undefined)
+    const useCase = new DeleteTripUseCase(trips)
+
+    await expect(useCase.execute({ id: 7, role: "DRIVER" }, 10)).rejects.toMatchObject({
+      statusCode: 403,
+      code: "FORBIDDEN_ROLE",
+    })
+    await expect(useCase.execute({ id: 1, role: "ADMIN" }, 10)).resolves.toBeUndefined()
+    expect(trips.delete).toHaveBeenCalledWith(10)
   })
 
   it("only lets the owner driver or an admin complete a trip", async () => {

@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import { RouteRepository } from "../../domain/routes/RouteRepository"
 import { DriverSummary, MiniBusStopSummary, Route, RouteWithRelations } from "../../domain/routes/Route"
+import { ApplicationError } from "../../application/errors/ApplicationError"
 import { handlePrismaError } from "../errors/PrismaErrorHandler"
 
 export class RoutePrismaRepository implements RouteRepository {
@@ -37,8 +38,26 @@ export class RoutePrismaRepository implements RouteRepository {
 
   async delete(id: number): Promise<void> {
     try {
-      await this.prisma.route.delete({ where: { id } })
+      const activeTrips = await this.prisma.trip.count({
+        where: { route_id: id, status: "ACTIVE" },
+      })
+      if (activeTrips > 0) {
+        throw new ApplicationError(
+          `Não é possível apagar a rota #${id}: existem ${activeTrips} viagem(ns) ACTIVE nesta rota.`,
+          409,
+          {
+            code: "ROUTE_HAS_ACTIVE_TRIP",
+            hint: "Conclua (POST /api/trips/:id/complete) ou cancele (POST /api/trips/:id/cancel) a viagem ativa e volte a apagar a rota.",
+          },
+        )
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.trip.deleteMany({ where: { route_id: id } })
+        await tx.route.delete({ where: { id } })
+      })
     } catch (error) {
+      if (error instanceof ApplicationError) throw error
       handlePrismaError(error)
     }
   }

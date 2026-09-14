@@ -9,6 +9,7 @@ import {
   CancelTripUseCase,
   CompleteTripUseCase,
   CreateTripUseCase,
+  DeleteTripUseCase,
   GetActiveTripUseCase,
   GetTripByIdUseCase,
   ListTripsUseCase,
@@ -52,6 +53,7 @@ export default async function tripRoutes(app: FastifyInstance) {
     new UpdateTripUseCase(trips),
     new CompleteTripUseCase(trips),
     new CancelTripUseCase(trips),
+    new DeleteTripUseCase(trips),
   )
   const boardingController = new BoardingRequestController(
     new CreateTripBoardingRequestUseCase(requests),
@@ -193,6 +195,20 @@ export default async function tripRoutes(app: FastifyInstance) {
       },
     },
     (req, reply) => tripController.cancel(req, reply),
+  )
+
+  app.delete(
+    "/trips/:id",
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        ...authSchema,
+        tags: ["Trips"],
+        summary: "Apagar viagem já encerrada (admin)",
+        params: idParams,
+      },
+    },
+    (req, reply) => tripController.delete(req, reply),
   )
 
   app.post(

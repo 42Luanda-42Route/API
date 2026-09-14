@@ -8,13 +8,23 @@ export class CreateCadeteUseCase {
 
   async execute(input: CreateCadeteInput): Promise<Cadete> {
     if (input.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
-      throw new ApplicationError("Invalid email format", 422)
+      throw new ApplicationError(`O email «${input.email}» não é válido.`, 422, {
+        code: "INVALID_EMAIL",
+        hint: "Use um email no formato nome@dominio.tld em POST /api/cadetes.",
+      })
     }
 
     if (input.username || input.email) {
       const existing = await this.repo.findByUsernameOrEmail(input.username || input.email || "")
       if (existing) {
-        throw new ApplicationError("Username or email already exists", 409)
+        throw new ApplicationError(
+          `Já existe um cadete com username «${input.username ?? existing.username}» ou email «${input.email ?? existing.email}».`,
+          409,
+          {
+            code: "CADETE_ALREADY_EXISTS",
+            hint: "Escolha outro username/email ou atualize o cadete existente com PUT /api/cadetes/:id.",
+          },
+        )
       }
     }
 
