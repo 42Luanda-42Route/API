@@ -22,31 +22,30 @@ model Admins {
 }
 
 model Cadetes {
-  id               Int               @id @default(autoincrement())
-  full_name        String?
-  username         String?           @unique
-  email            String?           @unique
-  city             String?
-  district         String?           @map("distrit")
-  priorityList     Boolean           @default(false) @map("prioritityList")
-  phone            Int?
-  stop_id          Int?
-  stop             MiniBusStop?      @relation(fields: [stop_id], references: [id], onDelete: SetNull)
+  id           Int          @id @default(autoincrement())
+  full_name    String?
+  username     String?      @unique
+  email        String?      @unique
+  city         String?
+  district     String?      @map("distrit")
+  priorityList Boolean      @default(false) @map("prioritityList")
+  phone        Int?
+  stop_id      Int?
+  stop         MiniBusStop? @relation(fields: [stop_id], references: [id], onDelete: SetNull)
   boardingRequests BoardingRequest[]
-  createdAt        DateTime          @default(now())
+  createdAt    DateTime     @default(now())
 }
 
 model Drivers {
-  id               Int                 @id @default(autoincrement())
-  full_name        String?
-  username         String?             @unique
-  email            String?             @unique
-  password         String?             @map("passwrd")
-  photo            String?
-  phone            Int?
-  coordinates      DriverCoordinates[]
+  id          Int                 @id @default(autoincrement())
+  full_name   String?
+  username    String?             @unique
+  email       String?             @unique
+  password    String?             @map("passwrd")
+  photo       String?
+  phone       Int?
+  coordinates DriverCoordinates[]
   boardingRequests BoardingRequest[]
-  trips            Trip[]
 
   // Rota atual do motorista
   current_route_id Int?
@@ -83,9 +82,8 @@ model Route {
   stops MiniBusStop[]
 
   //Motoristas podem estar temporariamente nesta rota
-  drivers          Drivers[]
+  drivers Drivers[]
   boardingRequests BoardingRequest[]
-  trips            Trip[]
 }
 
 model Message {
@@ -100,11 +98,11 @@ model Message {
 }
 
 model Chat {
-  id        Int       @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   full_name String?
   type      ChatType
   route_id  Int?
-  createdAt DateTime  @default(now())
+  createdAt DateTime   @default(now())
   messages  Message[]
 
   @@unique([type, route_id])
@@ -130,59 +128,28 @@ model DriverCoordinates {
   driver    Drivers  @relation(fields: [id_driver], references: [id], onDelete: Cascade)
 }
 
+
 enum BoardingRequestStatus {
   PENDING
   APPROVED
   REJECTED
 }
 
-enum TripStatus {
-  ACTIVE
-  COMPLETED
-  CANCELLED
-}
-
-model Trip {
-  id               Int        @id @default(autoincrement())
-  route_id         Int
-  driver_id        Int
-  vehicle_name     String
-  vehicle_plate    String
-  vehicle_capacity Int
-  status           TripStatus @default(ACTIVE)
-  startedAt        DateTime   @default(now())
-  endedAt          DateTime?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-
-  route            Route             @relation(fields: [route_id], references: [id], onDelete: Restrict)
-  driver           Drivers           @relation(fields: [driver_id], references: [id], onDelete: Restrict)
-  boardingRequests BoardingRequest[]
-
-  @@index([status, startedAt])
-  @@index([route_id, status])
-  @@index([driver_id, status])
-}
-
 model BoardingRequest {
-  id        Int                   @id @default(autoincrement())
+  id        Int                  @id @default(autoincrement())
   cadete_id Int
   driver_id Int
   route_id  Int
-  trip_id   Int?
   status    BoardingRequestStatus @default(PENDING)
-  flagged   Boolean               @default(true)
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @updatedAt
+  flagged   Boolean              @default(true)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
 
   cadete Cadetes @relation(fields: [cadete_id], references: [id], onDelete: Cascade)
   driver Drivers @relation(fields: [driver_id], references: [id], onDelete: Cascade)
   route  Route   @relation(fields: [route_id], references: [id], onDelete: Cascade)
-  trip   Trip?   @relation(fields: [trip_id], references: [id], onDelete: SetNull)
 
-  @@unique([trip_id, cadete_id])
   @@index([driver_id, status])
   @@index([route_id, status])
   @@index([cadete_id, status])
-  @@index([trip_id, status])
 }

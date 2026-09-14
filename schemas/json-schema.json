@@ -159,12 +159,6 @@
             "$ref": "#/definitions/BoardingRequest"
           }
         },
-        "trips": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Trip"
-          }
-        },
         "current_route": {
           "anyOf": [
             {
@@ -268,12 +262,6 @@
           "items": {
             "$ref": "#/definitions/BoardingRequest"
           }
-        },
-        "trips": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Trip"
-          }
         }
       }
     },
@@ -364,63 +352,6 @@
         }
       }
     },
-    "Trip": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "integer"
-        },
-        "vehicle_name": {
-          "type": "string"
-        },
-        "vehicle_plate": {
-          "type": "string"
-        },
-        "vehicle_capacity": {
-          "type": "integer"
-        },
-        "status": {
-          "type": "string",
-          "default": "ACTIVE",
-          "enum": [
-            "ACTIVE",
-            "COMPLETED",
-            "CANCELLED"
-          ]
-        },
-        "startedAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "endedAt": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "route": {
-          "$ref": "#/definitions/Route"
-        },
-        "driver": {
-          "$ref": "#/definitions/Drivers"
-        },
-        "boardingRequests": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/BoardingRequest"
-          }
-        }
-      }
-    },
     "BoardingRequest": {
       "type": "object",
       "properties": {
@@ -456,16 +387,6 @@
         },
         "route": {
           "$ref": "#/definitions/Route"
-        },
-        "trip": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/Trip"
-            },
-            {
-              "type": "null"
-            }
-          ]
         }
       }
     }
@@ -495,9 +416,6 @@
     },
     "driverCoordinates": {
       "$ref": "#/definitions/DriverCoordinates"
-    },
-    "trip": {
-      "$ref": "#/definitions/Trip"
     },
     "boardingRequest": {
       "$ref": "#/definitions/BoardingRequest"

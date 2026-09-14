@@ -5,7 +5,6 @@ export interface BoardingRequest {
   cadeteId: number
   driverId: number
   routeId: number
-  tripId: number | null
   status: BoardingRequestStatus
   flagged: boolean
   createdAt: Date
