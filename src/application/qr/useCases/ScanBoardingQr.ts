@@ -2,34 +2,8 @@ import { CadeteRepository } from "../../../domain/cadetes/CadeteRepository"
 import { BoardingRequestRepository } from "../../../domain/boarding/BoardingRequestRepository"
 import { ApplicationError } from "../../errors/ApplicationError"
 import { decryptQrPayload } from "../../../utils/qrCipher"
-import { emitToRoute } from "../../../WebSockets/socket"
+import { emitBoardingEvent } from "../../../WebSockets/socket"
 import { BoardingEligibilityResult, BoardingQrPayload, ScanBoardingQrInput } from "../dto"
-
-function serializeRequest(r: {
-  id: number
-  cadeteId: number
-  driverId: number
-  routeId: number
-  status: string
-  flagged: boolean
-  createdAt: Date
-  updatedAt: Date
-  cadeteName?: string | null
-  stopName?: string | null
-}) {
-  return {
-    id: r.id,
-    cadeteId: r.cadeteId,
-    driverId: r.driverId,
-    routeId: r.routeId,
-    status: r.status,
-    flagged: r.flagged,
-    createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
-    cadeteName: r.cadeteName ?? null,
-    stopName: r.stopName ?? null,
-  }
-}
 
 export class ScanBoardingQrUseCase {
   constructor(
@@ -115,7 +89,7 @@ export class ScanBoardingQrUseCase {
       })
     }
 
-    emitToRoute(payload.routeId, "boarding:request", serializeRequest(request))
+    emitBoardingEvent("boarding:request:created", request)
 
     return {
       eligible: true,
