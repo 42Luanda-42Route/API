@@ -1,6 +1,6 @@
 import { ApplicationError } from "../../errors/ApplicationError"
 import { BoardingRequestRepository } from "../../../domain/boarding/BoardingRequestRepository"
-import { emitToRoute } from "../../../WebSockets/socket"
+import { emitBoardingEvent } from "../../../WebSockets/socket"
 import { UpdateBoardingRequestInput } from "../dto"
 
 export class UpdateBoardingRequestUseCase {
@@ -41,18 +41,7 @@ export class UpdateBoardingRequestUseCase {
       )
     }
     const request = await this.boardingRequests.decideForTrip(input.requestId, input.status)
-    emitToRoute(request.routeId, "boarding:request:updated", {
-      id: request.id,
-      cadeteId: request.cadeteId,
-      driverId: request.driverId,
-      routeId: request.routeId,
-      status: request.status,
-      flagged: request.flagged,
-      createdAt: request.createdAt,
-      updatedAt: request.updatedAt,
-      cadeteName: request.cadeteName ?? null,
-      stopName: request.stopName ?? null,
-    })
+    emitBoardingEvent("boarding:request:updated", request)
     return request
   }
 }
