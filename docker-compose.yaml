@@ -27,16 +27,16 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-5000}:5000"
     env_file:
       - .env
     environment:
       NODE_ENV: production
-      PORT: 3000
+      PORT: 5000
       DATABASE_URL: postgresql://42route:42route123@postgres:5432/42route_db?sslmode=disable
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES: ${JWT_EXPIRES:-7d}
-      APP_URL: ${APP_URL:-http://localhost:3000}
+      APP_URL: ${APP_URL:-http://localhost:5000}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
       # Must be exactly 16, 24 or 32 bytes (see qrCipher)
       QR_SECRET_KEY: ${QR_SECRET_KEY}
@@ -46,7 +46,7 @@ services:
       SWAGGER_USER: ${SWAGGER_USER:-Admin42}
       SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:-change_me}
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:5000/api/health"]
       interval: 30s
       timeout: 5s
       start_period: 60s
