@@ -1,31 +1,44 @@
-# Uso: cp .env.example .env && docker compose -f docker-compose.dev.yaml up
+# ==============================================================================
+# Iniciar SEM Docker (Local):
+# 1. Configure o DATABASE_URL no seu ficheiro .env (ex.: banco local ou Neon):
+#    DATABASE_URL=postgresql://user:password@localhost:5432/42routedb?sslmode=disable
+# 2. Gere o cliente Prisma:
+#    npx prisma generate
+# 3. Inicie o servidor:
+#    npm run start:dev
+# ==============================================================================
+# Uso com Docker (apenas API, usando banco externo do .env):
+# docker compose -f docker-compose.dev.yaml up
+# ==============================================================================
+
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: 42route_postgres_dev
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: 42route
-      POSTGRES_PASSWORD: 42route123
-      POSTGRES_DB: 42route_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data_dev:/var/lib/postgresql/data
+  # Banco de dados em container desativado (usando banco externo do .env)
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: 42route_postgres_dev
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_USER: 42route
+  #     POSTGRES_PASSWORD: 42route123
+  #     POSTGRES_DB: 42route_db
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data_dev:/var/lib/postgresql/data
 
   api:
     image: node:20-alpine
     container_name: 42route_api_dev
     working_dir: /app
     restart: unless-stopped
-    depends_on:
-      - postgres
+    # depends_on:
+    #   - postgres
     ports:
       - "5000:5000"
     env_file:
       - .env
-    environment:
-      DATABASE_URL: postgresql://42route:42route123@postgres:5432/42route_db?sslmode=disable
+    # environment:
+    #   DATABASE_URL: postgresql://42route:42route123@postgres:5432/42route_db?sslmode=disable
     volumes:
       - .:/app
       - api_node_modules:/app/node_modules
@@ -37,5 +50,6 @@ services:
       && npm run start:dev"
 
 volumes:
-  postgres_data_dev:
+  # postgres_data_dev:
   api_node_modules:
+
