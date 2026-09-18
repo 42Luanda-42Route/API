@@ -16,19 +16,25 @@ export class BoardingRequestPrismaRepository implements BoardingRequestRepositor
     driverId: number
     routeId: number
   }): Promise<BoardingRequest> {
-    const row = await this.prisma.boardingRequest.create({
-      data: {
-        cadete_id: input.cadeteId,
+    const trip = await this.prisma.trip.findFirst({
+      where: {
         driver_id: input.driverId,
         route_id: input.routeId,
-        status: PrismaStatus.PENDING,
-        flagged: true,
+        status: PrismaTripStatus.ACTIVE,
       },
-      include: {
-        cadete: { select: { full_name: true, stop: { select: { stop_name: true } } } },
-      },
+      orderBy: { startedAt: "desc" },
     })
-    return this.map(row)
+    if (!trip) {
+      throw new ApplicationError(
+        `O motorista #${input.driverId} não tem viagem ACTIVE nesta rota. Inicie uma viagem antes do scan QR.`,
+        409,
+        {
+          code: "NO_ACTIVE_TRIP",
+          hint: "Motorista: POST /api/trips. Cadete: peça embarque em POST /api/trips/:tripId/boarding-requests após GET /api/trips/active.",
+        },
+      )
+    }
+    return this.createForTrip({ tripId: trip.id, cadeteId: input.cadeteId })
   }
 
   async findPending(cadeteId: number, driverId: number, routeId: number): Promise<BoardingRequest | null> {
@@ -48,6 +54,13 @@ export class BoardingRequestPrismaRepository implements BoardingRequestRepositor
   }
 
   async listForDriver(driverId: number, status?: BoardingRequestStatus): Promise<BoardingRequest[]> {
+    const active = await this.prisma.trip.findFirst({
+      where: { driver_id: driverId, status: PrismaTripStatus.ACTIVE },
+      orderBy: { startedAt: "desc" },
+    })
+    if (active) {
+      return this.listForTrip(active.id, status)
+    }
     const rows = await this.prisma.boardingRequest.findMany({
       where: {
         driver_id: driverId,
@@ -87,15 +100,76 @@ export class BoardingRequestPrismaRepository implements BoardingRequestRepositor
     driverId: number
     routeId: number
   }): Promise<BoardingRequest> {
-    const pending = await this.findPending(input.cadeteId, input.driverId, input.routeId)
-    if (pending) {
-      return this.updateStatus(pending.id, input.driverId, "APPROVED")
+    const trip = await this.prisma.trip.findFirst({
+      where: {
+        driver_id: input.driverId,
+        route_id: input.routeId,
+        status: PrismaTripStatus.ACTIVE,
+      },
+      orderBy: { startedAt: "desc" },
+    })
+    if (!trip) {
+      throw new ApplicationError(
+        `O motorista #${input.driverId} não tem viagem ACTIVE nesta rota. Inicie uma viagem antes de admitir por QR.`,
+        409,
+        {
+          code: "NO_ACTIVE_TRIP",
+          hint: "Crie a viagem com POST /api/trips e volte a escanear o QR do cadete.",
+        },
+      )
     }
+
+    const pendingOnTrip = await this.prisma.boardingRequest.findFirst({
+      where: {
+        trip_id: trip.id,
+        cadete_id: input.cadeteId,
+        status: PrismaStatus.PENDING,
+      },
+    })
+    if (pendingOnTrip) {
+      return this.decideForTrip(pendingOnTrip.id, "APPROVED")
+    }
+
+    const legacyPending = await this.findPending(input.cadeteId, input.driverId, input.routeId)
+    if (legacyPending) {
+      // Liga o pedido legado à viagem activa e aprova com as regras de capacidade.
+      await this.prisma.boardingRequest.update({
+        where: { id: legacyPending.id },
+        data: { trip_id: trip.id },
+      })
+      return this.decideForTrip(legacyPending.id, "APPROVED")
+    }
+
+    const existing = await this.prisma.boardingRequest.findFirst({
+      where: { trip_id: trip.id, cadete_id: input.cadeteId },
+    })
+    if (existing) {
+      if (existing.status === PrismaStatus.APPROVED) {
+        return (await this.findById(existing.id))!
+      }
+      return this.decideForTrip(existing.id, "APPROVED")
+    }
+
+    const approved = await this.prisma.boardingRequest.count({
+      where: { trip_id: trip.id, status: PrismaStatus.APPROVED },
+    })
+    if (approved >= trip.vehicle_capacity) {
+      throw new ApplicationError(
+        `A viagem #${trip.id} atingiu a capacidade máxima (${trip.vehicle_capacity} lugares).`,
+        409,
+        {
+          code: "TRIP_FULL",
+          hint: "Rejeite um pedido ou aumente a capacidade da viagem.",
+        },
+      )
+    }
+
     const row = await this.prisma.boardingRequest.create({
       data: {
         cadete_id: input.cadeteId,
         driver_id: input.driverId,
         route_id: input.routeId,
+        trip_id: trip.id,
         status: PrismaStatus.APPROVED,
         flagged: false,
       },
