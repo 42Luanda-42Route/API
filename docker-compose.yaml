@@ -16,7 +16,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES: ${JWT_EXPIRES:-7d}
-      APP_URL: ${APP_URL:-https://routes.42luanda.com}
+      APP_URL: ${APP_URL:-https://api42routes.42luanda.com}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
       QR_SECRET_KEY: ${QR_SECRET_KEY}
       QR_BOARDING_TTL_SECONDS: ${QR_BOARDING_TTL_SECONDS:-45}
