@@ -7,10 +7,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: 42route_api
     restart: always
-    ports:
-      - "${PORT:-3000}:3000"
+    expose:
+      - "3000"
     environment:
       NODE_ENV: production
       PORT: ${PORT:-3000}
