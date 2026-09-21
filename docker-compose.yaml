@@ -1,59 +1,33 @@
-services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: 42route_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: 42route
-      POSTGRES_PASSWORD: 42route123
-      POSTGRES_DB: 42route_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U 42route -d 42route_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+# ============================================================
+# 42Route API - Docker Compose de PRODUÇÃO (Temps / Servidor)
+# ============================================================
 
+services:
   api:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: 42route_api
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
+    restart: always
     ports:
-      - "${PORT:-5000}:5000"
-    env_file:
-      - path: .env
-        required: false
+      - "${PORT:-3000}:3000"
     environment:
       NODE_ENV: production
-      PORT: 5000
-      DATABASE_URL: postgresql://42route:42route123@postgres:5432/42route_db?sslmode=disable
-      JWT_SECRET: ${JWT_SECRET:-super_secret_key_42}
+      PORT: ${PORT:-3000}
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES: ${JWT_EXPIRES:-7d}
-      APP_URL: ${APP_URL:-http://localhost:5000}
+      APP_URL: ${APP_URL:-https://routes.42luanda.com}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
-      # Must be exactly 16, 24 or 32 bytes (see qrCipher)
-      QR_SECRET_KEY: ${QR_SECRET_KEY:-mR7tP3xL9sQ2vY1z}
+      QR_SECRET_KEY: ${QR_SECRET_KEY}
       QR_BOARDING_TTL_SECONDS: ${QR_BOARDING_TTL_SECONDS:-45}
-      FORTYTWO_CLIENT_ID: ${FORTYTWO_CLIENT_ID:-your_42_client_id}
-      FORTYTWO_CLIENT_SECRET: ${FORTYTWO_CLIENT_SECRET:-your_42_client_secret}
+      FORTYTWO_CLIENT_ID: ${FORTYTWO_CLIENT_ID}
+      FORTYTWO_CLIENT_SECRET: ${FORTYTWO_CLIENT_SECRET}
       SWAGGER_USER: ${SWAGGER_USER:-Admin42}
-      SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:-change_me}
+      SWAGGER_PASSWORD: ${SWAGGER_PASSWORD}
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:5000/api/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
       interval: 30s
       timeout: 5s
-      start_period: 60s
-      retries: 5
-
-volumes:
-  postgres_data:
-
-
+      start_period: 30s
+      retries: 3
